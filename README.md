@@ -68,4 +68,4 @@ See [release operations](docs/Releasing.md). Source, backend, appcast, and binar
 
 Changes to linguistic rules should include contrasting examples and retain uncertainty language. Keep text processing bounded and local by default. Security reports: use GitHub's private vulnerability reporting if enabled, rather than posting keys or user writing in an issue.
 
-MIT licence. Sparkle remains under its own licence included in the framework.
+MIT licence. Co-written and Sparkle licence notices are included in the app's Resources.

@@ -21,6 +21,8 @@ cp "$bin_dir/CoWrittenMac" "$app/Contents/MacOS/CoWrittenMac"
 ditto "$bin_dir/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 [[ -f Assets/CoWritten.icns ]] || scripts/make-icon.sh
 cp Assets/CoWritten.icns "$app/Contents/Resources/CoWritten.icns"
+cp LICENSE "$app/Contents/Resources/Co-written-Licence.txt"
+cp .build/checkouts/Sparkle/LICENSE "$app/Contents/Resources/Sparkle-Licence.txt"
 python3 scripts/write-plist.py "$app/Contents/Info.plist" "$version" "$build_number" "$feed"
 chmod 755 "$app/Contents/MacOS/CoWrittenMac"
 if [[ $identity == - ]]; then
