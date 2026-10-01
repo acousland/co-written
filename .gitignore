@@ -1,0 +1,15 @@
+.build/
+.swiftpm/
+dist/
+.DS_Store
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*.sqlite*
+*.pem
+*.p12
+*.key
+*.keychain*
+.venv/
