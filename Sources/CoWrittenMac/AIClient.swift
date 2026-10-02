@@ -8,13 +8,32 @@ struct AIReport: Decodable, Sendable {
     let strengths: [String]
     let suggestions: [AISuggestion]
     let caveat: String
+    let aiWriting: AIWritingAssessment?
     func validate(passage: String) throws {
         guard [summary, voice, formality, caveat].allSatisfy({ !$0.isEmpty && $0.count <= 2_000 }),
               !strengths.isEmpty, strengths.count <= 6, strengths.allSatisfy({ !$0.isEmpty && $0.count <= 1_000 }),
               suggestions.count <= 6, suggestions.allSatisfy({ !$0.excerpt.isEmpty && $0.excerpt.count <= 500 && passage.contains($0.excerpt) && !$0.advice.isEmpty && $0.advice.count <= 1_000 }) else {
             throw AIClientError.invalidResponse
         }
+        if let aiWriting { try aiWriting.validate(passage: passage) }
     }
+}
+struct AIWritingAssessment: Decodable, Sendable {
+    let summary: String
+    let signals: [AIWritingSignal]
+    let limitations: String
+    func validate(passage: String) throws {
+        guard [summary, limitations].allSatisfy({ !$0.isEmpty && $0.count <= 2_000 }), signals.count <= 6,
+            signals.allSatisfy({ (1...26).contains($0.patternID) && !$0.excerpt.isEmpty && $0.excerpt.count <= 500 && passage.contains($0.excerpt) &&
+                !$0.reason.isEmpty && $0.reason.count <= 1_000 && !$0.humanAlternative.isEmpty && $0.humanAlternative.count <= 1_000 })
+        else { throw AIClientError.invalidResponse }
+    }
+}
+struct AIWritingSignal: Decodable, Sendable {
+    let patternID: Int
+    let excerpt: String
+    let reason: String
+    let humanAlternative: String
 }
 struct AISuggestion: Decodable, Sendable {
     let excerpt: String

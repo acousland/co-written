@@ -1,0 +1,158 @@
+[
+  {
+    "id": 1,
+    "name": "Not X but Y",
+    "guidance": "Check contrasts that inflate a point without answering a real belief; keep informative contrasts.",
+    "weakAlone": false
+  },
+  {
+    "id": 2,
+    "name": "One-line closers and dramatic fragments",
+    "guidance": "Look for repeated closers, slogans or fragments that restate a preceding point without adding information.",
+    "weakAlone": false
+  },
+  {
+    "id": 3,
+    "name": "Sayings that sound deep",
+    "guidance": "Check pseudo-profound framing or aphorisms that substitute weight for a specific claim.",
+    "weakAlone": false
+  },
+  {
+    "id": 4,
+    "name": "Staged run-up before the point",
+    "guidance": "Check staged openings or announcements of the explanation before an ordinary claim.",
+    "weakAlone": false
+  },
+  {
+    "id": 5,
+    "name": "Arguing with no one",
+    "guidance": "Check unraised objections and fake alternatives; retain objections that readers actually need answered.",
+    "weakAlone": false
+  },
+  {
+    "id": 6,
+    "name": "Forced triads",
+    "guidance": "Check whether repeated groups of three add distinct ideas; three necessary items are ordinary.",
+    "weakAlone": false
+  },
+  {
+    "id": 7,
+    "name": "Repeated sentence openings",
+    "guidance": "Inspect formulaic repeated openings, respecting deliberate human rhythm.",
+    "weakAlone": false
+  },
+  {
+    "id": 8,
+    "name": "Dashes as the universal connector",
+    "guidance": "Repeated dash constructions are weak alone; punctuation and personal style are not authorship evidence.",
+    "weakAlone": true
+  },
+  {
+    "id": 9,
+    "name": "Stacked qualifiers",
+    "guidance": "Look for stacked hedges that blur a claim; ordinary uncertainty is appropriate and weak alone.",
+    "weakAlone": true
+  },
+  {
+    "id": 10,
+    "name": "Hyphenated pairs everywhere",
+    "guidance": "Repeated unnecessary compound hyphens after nouns are weak alone; technical terms may require them.",
+    "weakAlone": true
+  },
+  {
+    "id": 11,
+    "name": "Passive voice and missing subjects",
+    "guidance": "Repeated missing actors may obscure meaning; useful passive voice is weak alone.",
+    "weakAlone": true
+  },
+  {
+    "id": 12,
+    "name": "Overused AI words",
+    "guidance": "Look for clusters of stock abstract words such as delve, tapestry, testament, pivotal, showcase; respect literal and technical uses.",
+    "weakAlone": false
+  },
+  {
+    "id": 13,
+    "name": "Inflated significance",
+    "guidance": "Check grand significance, legacy, pivotal moments and optimistic outlooks without concrete support.",
+    "weakAlone": false
+  },
+  {
+    "id": 14,
+    "name": "Vague connection or association",
+    "guidance": "Check unnamed relationships that the passage could express specifically; do not invent a missing role.",
+    "weakAlone": false
+  },
+  {
+    "id": 15,
+    "name": "Shallow -ing riders",
+    "guidance": "Check participial riders that add unsupported interpretation to a fact.",
+    "weakAlone": false
+  },
+  {
+    "id": 16,
+    "name": "Sales language",
+    "guidance": "Check promotional scenery and praise in prose whose genre calls for plain description.",
+    "weakAlone": false
+  },
+  {
+    "id": 17,
+    "name": "Borrowed authority",
+    "guidance": "Check unnamed experts or prestige lists that replace the actual supported claim; lack of citations alone is ordinary.",
+    "weakAlone": false
+  },
+  {
+    "id": 18,
+    "name": "Avoiding is, are, and has",
+    "guidance": "Check showy verb substitutions where simple verbs would express the same supported meaning.",
+    "weakAlone": false
+  },
+  {
+    "id": 19,
+    "name": "Bold as decoration",
+    "guidance": "Check repeated bold labels and visual decoration without a purpose; consider document conventions.",
+    "weakAlone": false
+  },
+  {
+    "id": 20,
+    "name": "Decorative headings",
+    "guidance": "Check repeated title-case or decorated headings that add no useful structure.",
+    "weakAlone": false
+  },
+  {
+    "id": 21,
+    "name": "Curly quotation marks",
+    "guidance": "Editor-created curly quotes are weak alone and must never support an authorship conclusion.",
+    "weakAlone": true
+  },
+  {
+    "id": 22,
+    "name": "Chatbot residue",
+    "guidance": "Check greetings, praise, offers or closings left in standalone prose; real correspondence has ordinary greetings.",
+    "weakAlone": false
+  },
+  {
+    "id": 23,
+    "name": "Knowledge-limit disclaimers and guesses",
+    "guidance": "Check model-training disclaimers and unsupported plausible guesses; genuine uncertainty is appropriate.",
+    "weakAlone": false
+  },
+  {
+    "id": 24,
+    "name": "A heading repeated in the first sentence",
+    "guidance": "Check an opening sentence that merely restates the heading.",
+    "weakAlone": false
+  },
+  {
+    "id": 25,
+    "name": "Writing about the document instead of its subject",
+    "guidance": "Check redundant descriptions of layout or drafting; source credits, change logs and consequential caveats are useful.",
+    "weakAlone": true
+  },
+  {
+    "id": 26,
+    "name": "Re-explaining what the reader knows",
+    "guidance": "Assess only when conversation or audience context is present; do not guess what a reader knows.",
+    "weakAlone": false
+  }
+]

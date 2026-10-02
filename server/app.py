@@ -20,7 +20,17 @@ in plain language without pretending to provide a validated score. Respect diale
 assume formal or active writing is better. Give two or three concrete strengths and at most six
 actionable suggestions. Each suggestion must quote an exact, short substring of the passage. Do not
 invent errors or facts. Explain uncertainty for short samples. Do not rewrite the entire passage.
-Use the passage's language where possible. Return only the requested JSON structure."""
+Use the passage's language where possible. Also assess aiWriting using the Humanizer catalogue below.
+This is editorial review, not authorship detection. Never give an AI probability or an authorship verdict.
+Provide at most three signals with an exact excerpt, the catalogue patternID, a cautious reason and a
+plausible humanAlternative. Empty signals are valid; no matches do not prove human authorship.
+Weak-alone patterns need other cues. Preserve deliberate voice; leave quotations, titles, proper names,
+code and text discussing a pattern alone. Do not invent facts or rewrite the passage. The limitations
+must explain the overlap of human, edited, translated and AI-assisted writing and that style cannot
+establish authorship. Be especially cautious with short samples. Return only the requested JSON structure."""
+CATALOGUE = json.loads((Path(__file__).parent / "humanizer-patterns.json").read_text())
+SYSTEM_PROMPT += "\nHumanizer 3.1.0 patterns:\n" + "\n".join(
+    f"{p['id']}. {p['name']}: {p['guidance']}" for p in CATALOGUE)
 SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
@@ -30,8 +40,15 @@ SCHEMA = {
             "properties": {"excerpt": {"type": "string"}, "advice": {"type": "string"}},
             "required": ["excerpt", "advice"]}},
         "caveat": {"type": "string"},
+        "aiWriting": {"type": "object", "additionalProperties": False,
+            "properties": {"summary": {"type": "string"}, "limitations": {"type": "string"},
+                "signals": {"type": "array", "items": {"type": "object", "additionalProperties": False,
+                    "properties": {"patternID": {"type": "integer", "enum": list(range(1, 27))},
+                        "excerpt": {"type": "string"}, "reason": {"type": "string"}, "humanAlternative": {"type": "string"}},
+                    "required": ["patternID", "excerpt", "reason", "humanAlternative"]}}},
+            "required": ["summary", "signals", "limitations"]},
     },
-    "required": ["summary", "voice", "formality", "strengths", "suggestions", "caveat"],
+    "required": ["summary", "voice", "formality", "strengths", "suggestions", "caveat", "aiWriting"],
 }
 
 
@@ -158,6 +175,26 @@ def validate_report(report, text):
             raise ValueError("Evidence is not in the passage")
         if not isinstance(suggestion["advice"], str) or not 1 <= len(suggestion["advice"]) <= 1_000:
             raise ValueError("Invalid advice")
+
+    assessment = report["aiWriting"]
+    if not isinstance(assessment, dict) or set(assessment) != {"summary", "signals", "limitations"}:
+        raise ValueError("Invalid AI-style review")
+    for field in ("summary", "limitations"):
+        if not isinstance(assessment[field], str) or not 1 <= len(assessment[field]) <= 2_000:
+            raise ValueError("Invalid AI-style review field")
+    signals = assessment["signals"]
+    if not isinstance(signals, list) or len(signals) > 6:
+        raise ValueError("Invalid AI-style signals")
+    for signal in signals:
+        if not isinstance(signal, dict) or set(signal) != {"patternID", "excerpt", "reason", "humanAlternative"}:
+            raise ValueError("Invalid AI-style signal")
+        if type(signal["patternID"]) is not int or not 1 <= signal["patternID"] <= 26:
+            raise ValueError("Invalid Humanizer pattern")
+        if not isinstance(signal["excerpt"], str) or not 1 <= len(signal["excerpt"]) <= 500 or signal["excerpt"] not in text:
+            raise ValueError("Evidence is not in the passage")
+        for field in ("reason", "humanAlternative"):
+            if not isinstance(signal[field], str) or not 1 <= len(signal[field]) <= 1_000:
+                raise ValueError("Invalid AI-style explanation")
 
 
 class Application:

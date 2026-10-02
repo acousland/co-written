@@ -10,7 +10,7 @@ from app import Application, Denied, Store, call_openai, validate_report
 
 def report(text):
     return {"summary": "A clear passage.", "voice": "First person.", "formality": "Neutral.",
-            "strengths": ["Clear subject."], "suggestions": [{"excerpt": text[:20], "advice": "Consider the reader."}], "caveat": "Context matters."}
+            "strengths": ["Clear subject."], "suggestions": [{"excerpt": text[:20], "advice": "Consider the reader."}], "caveat": "Context matters.", "aiWriting": {"summary": "No supported cues.", "signals": [], "limitations": "Style cannot establish authorship."}}
 
 
 class ServiceTests(unittest.TestCase):
@@ -35,6 +35,21 @@ class ServiceTests(unittest.TestCase):
         response = []
         output = b"".join(self.app(env, lambda status, headers: response.append((status, dict(headers)))))
         return int(response[0][0].split()[0]), json.loads(output), response[0][1]
+
+    def test_humanizer_evidence_and_catalogue(self):
+        from app import CATALOGUE, SYSTEM_PROMPT
+        self.assertEqual([p["id"] for p in CATALOGUE], list(range(1, 27)))
+        self.assertIn("26. Re-explaining", SYSTEM_PROMPT)
+        root = Path(__file__).resolve().parents[2]
+        self.assertEqual(CATALOGUE, json.loads((root / "Sources/CoWrittenCore/Resources/humanizer-patterns.json").read_text()))
+        sample = report("Great question!")
+        sample["aiWriting"]["signals"] = [{"patternID": 22, "excerpt": "Great question", "reason": "Chat wrapper.", "humanAlternative": "Ordinary greeting."}]
+        validate_report(sample, "Great question!")
+        for change in [{"excerpt": "invented"}, {"patternID": 99}, {"patternID": True}, {"humanAlternative": ""}]:
+            bad = json.loads(json.dumps(sample))
+            bad["aiWriting"]["signals"][0].update(change)
+            with self.assertRaises(ValueError):
+                validate_report(bad, "Great question!")
 
     def test_authentication_and_revocation(self):
         self.assertEqual(self.request(token="")[0], 401)

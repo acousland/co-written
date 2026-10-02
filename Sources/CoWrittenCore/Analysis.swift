@@ -36,6 +36,7 @@ public struct WritingReport: Sendable, Codable {
     public let repeatedWords: [String]
     public let sentences: [SentenceMeasure]
     public let findings: [Finding]
+    public let aiStyle: AIStyleReview
     public let caveat: String
 
     public var formalityLabel: String {
@@ -53,7 +54,7 @@ public struct WritingReport: Sendable, Codable {
     }
     public var exportText: String {
         let metrics = "\(wordCount) words · \(sentenceCount) sentences · \(paragraphCount) paragraphs\nVoice: \(grammaticalVoice)\nPoint of view: \(pointOfView)\nTone cues: \(tone)\nFormality: \(formality.map { String($0) + "/100" } ?? "unavailable")\nReadability: \(readability.map { String(format: "%.0f/100", $0) } ?? "unavailable")\n\(formalityEvidence)\n\n\(caveat)"
-        return "Co-written analysis\n\n\(metrics)\n\n" + findings.map { "\($0.kind): “\($0.excerpt)”\n\($0.explanation)" }.joined(separator: "\n\n")
+        return "Co-written analysis\n\n\(metrics)\n\n" + findings.map { "\($0.kind): “\($0.excerpt)”\n\($0.explanation)" }.joined(separator: "\n\n") + "\n\nAI-style cues\n\(aiStyle.summary)\n\(aiStyle.limitations)\n" + aiStyle.signals.map { "\($0.kind): “\($0.excerpt)”\n\($0.explanation)" }.joined(separator: "\n\n")
     }
 }
 
@@ -73,7 +74,7 @@ public enum WritingAnalyzer {
         recognizer.processString(text)
         let language = recognizer.dominantLanguage
         // Short Latin fragments are often ambiguous: allow the English rules but warn about the sample.
-        let english = language == .english || (n < 8 && text.unicodeScalars.allSatisfy { !$0.properties.isAlphabetic || $0.value < 128 })
+        let english = language == .english || (language == nil && n < 8 && text.unicodeScalars.allSatisfy { !$0.properties.isAlphabetic || $0.value < 128 })
         let languageName = language.map { Locale.current.localizedString(forLanguageCode: $0.rawValue) ?? $0.rawValue } ?? "Undetermined"
         let syllables = lower.reduce(0) { $0 + syllableCount($1) }
         let readability = english && n >= 10 ? max(0, min(100, 206.835 - 1.015 * average - 84.6 * Double(syllables) / Double(max(1, n)))) : nil
@@ -131,7 +132,7 @@ public enum WritingAnalyzer {
         if n < 50 { caveats.append("This sample is short; style and readability estimates are less reliable.") }
         if input.count > maximumCharacters { caveats.append("Only the first \(maximumCharacters) characters were analysed.") }
         if !english { caveats.append("English style and syllable rules are disabled for this language.") }
-        return WritingReport(text: text, language: languageName, supportsStyleAnalysis: english, wordCount: n, sentenceCount: sentences.count, paragraphCount: paragraphs, readingSeconds: Int(ceil(Double(n) / 238 * 60)), averageSentenceLength: average, readability: readability, formality: score, formalityEvidence: evidence, pointOfView: pov, grammaticalVoice: voice, tone: tone, vocabularyVariety: Int(Double(Set(lower).count) / Double(max(1, n)) * 100), repeatedWords: repeated, sentences: sentences, findings: findings.sorted { $0.start < $1.start }, caveat: caveats.joined(separator: " "))
+        return WritingReport(text: text, language: languageName, supportsStyleAnalysis: english, wordCount: n, sentenceCount: sentences.count, paragraphCount: paragraphs, readingSeconds: Int(ceil(Double(n) / 238 * 60)), averageSentenceLength: average, readability: readability, formality: score, formalityEvidence: evidence, pointOfView: pov, grammaticalVoice: voice, tone: tone, vocabularyVariety: Int(Double(Set(lower).count) / Double(max(1, n)) * 100), repeatedWords: repeated, sentences: sentences, findings: findings.sorted { $0.start < $1.start }, aiStyle: aiStyle(text, english: english, words: n), caveat: caveats.joined(separator: " "))
     }
 
     static func words(_ text: String) -> [String] {

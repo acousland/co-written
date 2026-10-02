@@ -13,4 +13,5 @@ scripts/notarize.sh app
 scripts/build-dmg.sh
 scripts/notarize.sh dmg
 scripts/prepare-appcast.sh
+python3 scripts/verify-release-delta.py
 echo "Signed, notarised DMG and update feed are ready in dist/."

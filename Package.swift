@@ -8,7 +8,7 @@ let package = Package(
                .executable(name: "CoWrittenMac", targets: ["CoWrittenMac"])],
     dependencies: [.package(url: "https://github.com/sparkle-project/Sparkle.git", exact: "2.10.0")],
     targets: [
-        .target(name: "CoWrittenCore"),
+        .target(name: "CoWrittenCore", resources: [.process("Resources")]),
         .executableTarget(name: "CoWrittenMac", dependencies: ["CoWrittenCore", .product(name: "Sparkle", package: "Sparkle")],
                           linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]),
         .testTarget(name: "CoWrittenCoreTests", dependencies: ["CoWrittenCore"]),

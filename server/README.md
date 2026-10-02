@@ -18,7 +18,7 @@ docker compose exec analysis python manage.py issue alice --daily-limit 20
 docker compose exec analysis python manage.py revoke alice
 ```
 
-Choose **A shared Co-written service** in Settings, then enter the HTTPS origin (e.g. `https://writing.example.com`, with no path) and token. Never paste the OpenAI key into the app, GitHub, or an issue.
+Choose **A shared Co-written service** in Settings, then enter the HTTPS origin (e.g. `https://writing.example.com`, with no path) and token. Saving the token permits automatic sharing when automatic AI is on; disable that toggle to use one-off confirmed requests. Use a personal token in this mode; keep the owner’s provider key on the server and out of client apps, GitHub, and issues.
 
 ## Boundaries
 
@@ -28,7 +28,7 @@ Choose **A shared Co-written service** in Settings, then enter the HTTPS origin 
 - Daily buckets reset at UTC midnight. The default cap bounds request count, not exact dollars. Cost depends on the model and tokenisation. Start with a low cap and configure provider project limits/alerts and operational monitoring for your budget.
 - Token hashes, owner labels, and aggregate counters are stored; raw tokens, passages, results, and provider keys are not. Tokens have 256 random bits and can be revoked individually by label. Reusing a label groups its tokens for revocation.
 - No web signup, payment system, password reset, browser CORS support, or user identity verification is included. For a public self-service product, add authenticated accounts and entitlement checks rather than distributing a universal token. Device identity or code signing cannot protect a shared client secret.
-- Text is untrusted model input. Developer instructions constrain coaching and a strict JSON schema constrains output. The server validates excerpt evidence against the passage. Prompt injection can still affect advice quality; the model has no tools, credentials in its prompt, or authority to change configuration.
+- Text is untrusted model input. Developer instructions constrain coaching and a strict JSON schema constrains output. The server validates excerpt evidence against the passage, including the Humanizer-based style review. The pinned 26-pattern catalogue is shared with the app; neither review path establishes authorship. Prompt injection can still affect advice quality; the model has no tools, credentials in its prompt, or authority to change configuration.
 - `store: false` disables Responses application-state storage. It does not promise zero retention: provider abuse monitoring and other applicable data controls still apply. Read [OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data) and disclose your hosting provider's logging and backups to users.
 
 ## Test without an API key
