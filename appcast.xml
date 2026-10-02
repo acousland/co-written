@@ -3,6 +3,26 @@
     <channel>
         <title>Co-written</title>
         <item>
+            <title>0.2.2</title>
+            <pubDate>Fri, 02 Oct 2026 10:31:57 +1000</pubDate>
+            <sparkle:version>1790901036</sparkle:version>
+            <sparkle:shortVersionString>0.2.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Co-written 0.2.2
+
+- Start silently with only the menu-bar icon, including the first launch and login startup.
+- Settings and the detailed view open only when explicitly requested. Remove the automatic first-run popup and prevent previously open windows from being restored after a restart.
+- Keep shortcut-only selection analysis and default AI for requested reviews.
+- Signed and notarised universal macOS app, packaged in a DMG with signed Sparkle delta updates.
+]]></description>
+            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.2/Co-written-0.2.2.dmg" length="2558740" type="application/octet-stream" sparkle:edSignature="cT4zvv1DFqu4RfAaoJP/fYUNo/+RUlndS6Gz3A5Dk+KpES/vAfojT/BFfoxFujZ3xCSz4uo7lOSq0WGHSqMMBg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.2/Co-written1790901036-1790900675.delta" sparkle:deltaFrom="1790900675" length="171666" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="18KCnKvsiCci4JuW6UukPpjvTNNeDkInox1gNRKLCDpI9uSxduidF595ZMWG5VrMObEhZNl5awVbW47uKBXoAA=="/>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.2/Co-written1790901036-1790899559.delta" sparkle:deltaFrom="1790899559" length="273842" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="uRlCLmMYJmRbE+5noQ5q6lRsvdnQZbvQC4VPwi75jAlbNQIBHeisg1FNd/Nd5wprC39HaDT+IAmxQfprhrhvAg=="/>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.2/Co-written1790901036-1790898615.delta" sparkle:deltaFrom="1790898615" length="449198" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="QtBqoBbR4ydPD6y+E7Mws0moIedwzY0rOHwMk2MW46kSrpGEhBTtXV7uDWZ7E9jQE2nzwv/+72S+RHz1ftWVAA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.2.1</title>
             <pubDate>Fri, 02 Oct 2026 10:25:51 +1000</pubDate>
             <sparkle:version>1790900675</sparkle:version>
@@ -47,27 +67,6 @@ Humanizer is MIT licensed by Siqi Chen; its pinned catalogue and licence are inc
             <sparkle:deltas>
                 <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.0/Co-written1790899559-1790898615.delta" sparkle:deltaFrom="1790898615" length="406738" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="bqlHu+6HTTW/dRb1S9mth9IIp6VF4hW9OgMk4ObdpkJgeyhFMGDeie4kUgWR6LhTaiF2RpWFwrBT78mN4omcBA=="/>
             </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.1.0</title>
-            <pubDate>Fri, 02 Oct 2026 09:51:26 +1000</pubDate>
-            <sparkle:version>1790898615</sparkle:version>
-            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# Co-written 0.1.0
-
-- A native macOS menu-bar companion for understanding selected text.
-- Local estimates for grammatical voice, perspective, formality, tone cues, readability, sentence rhythm, and repetition.
-- Evidence-based cues for passive constructions, hedging, intensifiers, abstract nouns, wordiness, and long sentences.
-- Automatic selection analysis, Shift–Command–L, a macOS Service, and a paste fallback.
-- Optional AI perspective directly from OpenAI using your own key in macOS Keychain; no shared provider key in the download.
-- Universal Apple Silicon / Intel build for macOS 14 or later, Developer ID signing, Apple notarisation, a DMG, and signed Sparkle updates.
-
-English style analysis uses explainable heuristics. It can miss patterns or flag legitimate constructions. This initial release has no previous version to patch; delta downloads are generated for subsequent releases when Sparkle can produce a smaller update.
-
-The app is self-sufficient. Optional AI requires your own OpenAI API key in Settings; no separate server is needed. A protected backend is also provided as an optional alternative for owner-funded access. No live OpenAI call was made during initial validation.
-]]></description>
-            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.1.0/Co-written-0.1.0.dmg" length="2351286" type="application/octet-stream" sparkle:edSignature="oQ2D9zf8uIW6SQSpX4CmFKijnTjvycdDFc4TEnwe3u/ES0EtVvfxHjhxvtcjeA8A/XQu6fYJjsZ+cNhOQsJIBA=="/>
         </item>
     </channel>
 </rss>
