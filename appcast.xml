@@ -3,6 +3,30 @@
     <channel>
         <title>Co-written</title>
         <item>
+            <title>0.3.3</title>
+            <pubDate>Fri, 02 Oct 2026 11:15:16 +1000</pubDate>
+            <sparkle:version>1790903627</sparkle:version>
+            <sparkle:shortVersionString>0.3.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Co-written 0.3.3
+
+- Every settled analysis includes an AI check when AI, a saved credential and sharing are enabled. The 15-second mouse delay is removed. Deselecting after a request starts lets that review finish; changing the passage or closing the full window still cancels it.
+- Enabling AI with already-authorised sharing checks the current passage too. AI progress, completion and failures are explicit. The full overview includes the AI check, and an authorised refresh or retry needs no repeated sharing confirmation.
+- Restore the warm off-white paper, dark ink and muted green presentation in both light and dark mode. Native Liquid Glass window and toolbar controls remain.
+- Word selections use its native selected text range rather than a focused page fragment, including selections across pages. Enable Word selections in Settings or allow the one-time macOS Automation prompt after pressing ⇧⌘L in Word. Access failure is shown instead of silently using partial text.
+- Text selected in Word search and formatting fields uses that field’s selection, keeping it separate from any remembered document highlight.
+- Signed, notarised universal macOS app, DMG and verified Sparkle delta updates.
+
+Selections remain limited to 20,000 characters, with a notice in the report for longer passages. Word capture has automated native-query and multi-page response checks; live Word capture has not been manually exercised. AI requests use each user's own Keychain credential.
+]]></description>
+            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.3/Co-written-0.3.3.dmg" length="2699426" type="application/octet-stream" sparkle:edSignature="bK4r/DfbxoUHgc0fWLmAz3QDYAK3BBCEYU4kj8BJCJi0KLFGyDUIdlWL+X3Np+3e6T1h4dVOq3lvcv+8tycOBg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.3/Co-written1790903627-1790903417.delta" sparkle:deltaFrom="1790903417" length="98026" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Oo7Ptqt7mlYXYpVFFcbqtPTW/ch1r1pREt/qtvzq5SBGoX8LARRIELVWJ0A/YWPgc89Z67F048ZDpr6Ta/mOAA=="/>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.3/Co-written1790903627-1790902496.delta" sparkle:deltaFrom="1790902496" length="313650" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="o+x8HgufOsuflsl6Aq0d8B7Bb+wLCtLfFAUAbzG/4iJK5gaXByWZ1U6YY4AfPRMDHYjEorU4EpYudmyWnPFvCQ=="/>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.3/Co-written1790903627-1790901697.delta" sparkle:deltaFrom="1790901697" length="426302" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="aiPQpW9B/U7zJFeYf/fpGtS1ffhqozt8A16vrzEqaJ0y+ZDJioEScErdXrvq0bKDk+IRdIQIdI4VssBg0vuhBA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.3.2</title>
             <pubDate>Fri, 02 Oct 2026 11:11:48 +1000</pubDate>
             <sparkle:version>1790903417</sparkle:version>
@@ -46,30 +70,6 @@ Style cues can occur in human and AI writing and cannot establish authorship.
                 <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.1/Co-written1790902496-1790901697.delta" sparkle:deltaFrom="1790901697" length="329574" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="qhsvfLJ2yWU7ENkUQ8X2b3TPSsnWCnzuc6H4oYdTjDcPOO4TETqG0UGlgFVFNd+8lP9x5yX+5a8yuzxmWPxhCw=="/>
                 <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.1/Co-written1790902496-1790901036.delta" sparkle:deltaFrom="1790901036" length="437162" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Zm4HHcxs/IiLVKQGxX9GFVh3Wh/CWC3L4nAsHD+aXPNUZvB5MbSEEjF9rsZYRiHQfl3RM/8RZzR8n5E1K3SpDA=="/>
                 <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.1/Co-written1790902496-1790900675.delta" sparkle:deltaFrom="1790900675" length="449466" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="m9GR1GIs8kl43IVFufPnegSInUMvJ9xx/jheLg2z/vKu9pw4lG054+aSFTeFJVgFjeDzDh7wMX9eMP8QhEFtAw=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.3.0</title>
-            <pubDate>Fri, 02 Oct 2026 10:42:58 +1000</pubDate>
-            <sparkle:version>1790901697</sparkle:version>
-            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# Co-written 0.3.0
-
-- A succinct menu-bar dropdown: icons, short feature labels and cue counts on one page. Its height adapts to the findings. Expand into the full app for evidence and detailed advice.
-- Liquid Glass controls on macOS 26+, system colours and light/dark appearance, with native material fallbacks on older Macs. Readable content surfaces keep the writing clear.
-- Open the full app to analyse mouse selections in other apps automatically. Closing, hiding or minimising its window stops selection watching and pending AI work; menu-bar-only operation still uses **⇧⌘L**.
-- AI stays enabled by default with your own saved key and sharing permission. Mouse-triggered requests wait for stable selections and are spaced by at least 15 seconds. Explicit shortcut requests and retries remain responsive.
-- Start silently in the menu bar. Settings and the full window open only when requested, and saved windows are not restored.
-- Signed and notarised universal macOS app, DMG and verified Sparkle delta updates.
-
-AI reviews send the requested or settled highlighted passage to your configured provider and may incur API charges. Each user supplies their own key, stored in Keychain. Turn off AI for local analysis. Style cues, including Humanizer patterns, cannot establish authorship. Live OpenAI calls remain unverified without a saved key; regression checks use mock responses.
-]]></description>
-            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written-0.3.0.dmg" length="2556863" type="application/octet-stream" sparkle:edSignature="YNW58VsrRYdYyF8A3RFH+Ub+oVdxtSfGSzu601xETUNlaWUpzQaNqdvMqGdFQsN1BwROw/reqAcPJCbvsIptDA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written1790901697-1790901036.delta" sparkle:deltaFrom="1790901036" length="337486" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BUr3m27jpDEAgCDsWsYZGB1v8nNFJqkug5cTPlZy4tCyS9ziPxzI16dF889grRbLbJmWWipOmQRtx5HbM7Q0Cw=="/>
-                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written1790901697-1790900675.delta" sparkle:deltaFrom="1790900675" length="354210" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="3AdWl7l6wFICER1CGDt0WK4QYLFQpNlzkvHg3wscOahFhgv7xu1+NEfH02FKKsNxhaCjjMRuyBDuxD7WCOjoCg=="/>
-                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written1790901697-1790899559.delta" sparkle:deltaFrom="1790899559" length="386354" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BR+p9g10hhZyxlmPA7iRh9hGEnd+G5JsB0HTMslIorjv2r/37lNOd7KXRmrLIDTFyV1ODSiG+oD6ivyYPcnGCg=="/>
             </sparkle:deltas>
         </item>
     </channel>
