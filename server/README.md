@@ -18,12 +18,12 @@ docker compose exec analysis python manage.py issue alice --daily-limit 20
 docker compose exec analysis python manage.py revoke alice
 ```
 
-Choose **A shared Co-written service** in Settings, then enter the HTTPS origin (e.g. `https://writing.example.com`, with no path) and token. Saving the token permits automatic sharing when automatic AI is on; disable that toggle to use one-off confirmed requests. Use a personal token in this mode; keep the owner’s provider key on the server and out of client apps, GitHub, and issues.
+Choose **A shared Co-written service** in Settings, then enter the HTTPS origin (e.g. `https://writing.example.com`, with no path) and token. Saving the token permits AI for future explicitly requested analyses when AI is enabled; setup never sends the existing passage. Disable that toggle to use one-off confirmed requests. Use a personal token in this mode; keep the owner’s provider key on the server and out of client apps, GitHub, and issues.
 
 ## Boundaries
 
 - Only `POST /v1/analyze` with a JSON object containing `text` is accepted. The client cannot choose a model, system prompt, destination, tools, token limit, or arbitrary API endpoint.
-- Maximum 20,000 characters / 100,000 request bytes, 2,000 output tokens, a 40-second upstream timeout, and bounded upstream responses.
+- Maximum 20,000 characters / 100,000 request bytes, 4,096 output tokens, a 65-second upstream timeout, and bounded upstream responses.
 - Each token has a daily allowance and five requests per UTC minute. All users share a global daily request cap. SQLite `BEGIN IMMEDIATE` reserves all three counters before the API call, across worker processes. Failed calls remain charged so retries cannot avoid caps. Quotas survive restarts; deleting the database or deploying separate databases resets/splits their limits. Use one shared durable database for this deployment.
 - Daily buckets reset at UTC midnight. The default cap bounds request count, not exact dollars. Cost depends on the model and tokenisation. Start with a low cap and configure provider project limits/alerts and operational monitoring for your budget.
 - Token hashes, owner labels, and aggregate counters are stored; raw tokens, passages, results, and provider keys are not. Tokens have 256 random bits and can be revoked individually by label. Reusing a label groups its tokens for revocation.
@@ -43,3 +43,5 @@ python3 -m venv .venv
 ```
 
 These tests mock the provider and exercise the Responses payload, output validation, real HTTP serving, auth, revocation, privacy, and concurrent quota reservations. A live model call still needs your server key and chosen model. Docker deployment needs a running Docker daemon.
+
+AI replies use bounded concise fields. Invalid quoted findings are omitted with a visible note; useful summaries remain available. Incomplete, cutoff, filtered and refused replies return fixed error codes without forwarding private provider text. The supplied proxy waits 80 seconds and Gunicorn workers allow 90 seconds; the Mac client waits 75 seconds.

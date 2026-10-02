@@ -13,8 +13,8 @@ private actor Probe {
     }
     func captured() -> [String] { texts }
 }
-@MainActor private func configuredModel(_ defaults: UserDefaults, probe: Probe, delay: Duration = .milliseconds(30), requestDelay: Duration = .zero, fail: Bool = false, available: Bool = true, interval: Duration = .milliseconds(100)) -> AppModel {
-    AppModel(defaults: defaults, aiDelay: delay, aiMinimumInterval: interval, credentialAvailable: { _, _ in available }, analyzeAI: { text, _, _ in try await probe.call(text, delay: requestDelay, fail: fail) })
+@MainActor private func configuredModel(_ defaults: UserDefaults, probe: Probe, delay: Duration = .milliseconds(30), requestDelay: Duration = .zero, fail: Bool = false, available: Bool = true) -> AppModel {
+    AppModel(defaults: defaults, aiDelay: delay, credentialAvailable: { _, _ in available }, analyzeAI: { text, _, _ in try await probe.call(text, delay: requestDelay, fail: fail) })
 }
 @MainActor private func waitUntil(_ condition: () -> Bool) async throws {
     for _ in 0..<100 {
@@ -23,7 +23,7 @@ private actor Probe {
     }
     #expect(condition())
 }
-@Test @MainActor func automaticAIIsDefaultButExistingKeyNeedsSharingChoice() async throws {
+@Test @MainActor func defaultAIRequiresSharingAndAnExplicitAnalysisRequest() async throws {
     let suite = "CoWritten.tests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
@@ -35,6 +35,9 @@ private actor Probe {
     try await Task.sleep(for: .milliseconds(80))
     #expect(await probe.captured().isEmpty)
     model.credentialsChanged(authorize: true)
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(await probe.captured().isEmpty)
+    model.analyze("We wrote a clear passage.", source: "Test")
     try await waitUntil { model.aiReport != nil }
     #expect(await probe.captured().count == 1)
     #expect(model.reportText.contains("AI style review"))
@@ -43,7 +46,7 @@ private actor Probe {
     #expect(await probe.captured().count == 1)
     #expect(model.source == "Another app")
 }
-@Test @MainActor func rapidSelectionChangesOnlySendSettledText() async throws {
+@Test @MainActor func newExplicitRequestCancelsPendingOldPassage() async throws {
     let suite = "CoWritten.tests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
@@ -56,7 +59,7 @@ private actor Probe {
     try await waitUntil { model.aiReport != nil }
     #expect(await probe.captured() == ["Second settled passage."])
 }
-@Test @MainActor func clearAndPausePreventLateAIResults() async throws {
+@Test @MainActor func clearAndDisablingAIPreventLateResults() async throws {
     let suite = "CoWritten.tests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
@@ -71,7 +74,7 @@ private actor Probe {
     #expect(model.aiReport == nil)
     model.analyze("Another passage.", source: "Test")
     try await waitUntil { model.report != nil }
-    model.automatic = false
+    model.aiAutomatic = false
     try await Task.sleep(for: .milliseconds(150))
     #expect(await probe.captured() == ["Private writing."])
     #expect(!model.isRequestingAI)
@@ -101,14 +104,17 @@ private actor Probe {
     try await waitUntil { model.report != nil }
     model.aiProvider = .sharedService
     model.server = "https://other.example.com"
-    #expect(!model.automaticAIAllowed)
+    #expect(!model.aiSharingAllowed)
     try await Task.sleep(for: .milliseconds(200))
     #expect(await probe.captured().isEmpty)
     model.credentialsChanged(authorize: true)
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(await probe.captured().isEmpty)
+    model.analyze("Keep this local.", source: "Requested after setup")
     try await waitUntil { model.aiReport != nil }
     #expect(await probe.captured().count == 1)
 }
-@Test @MainActor func failedAutomaticRequestsDoNotRetryAndDisablingCancelsDebounce() async throws {
+@Test @MainActor func failureRequiresExplicitRetryAndDisablingCancelsPendingRequest() async throws {
     let suite = "CoWritten.tests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
@@ -117,28 +123,116 @@ private actor Probe {
     model.credentialsChanged(authorize: true)
     model.analyze("A failed request.", source: "Test")
     try await waitUntil { !model.aiError.isEmpty }
-    model.analyze("A failed request.", source: "Test")
     try await Task.sleep(for: .milliseconds(100))
     #expect(await probe.captured().count == 1)
+    model.analyze("A failed request.", source: "Explicit retry")
+    try await waitUntil { model.isRequestingAI || !model.aiError.isEmpty }
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(await probe.captured().count == 2)
     model.analyze("Do not send this.", source: "Test")
     model.aiAutomatic = false
     try await waitUntil { model.report != nil }
     try await Task.sleep(for: .milliseconds(100))
-    #expect(await probe.captured().count == 1)
+    #expect(await probe.captured().count == 2)
 }
-@Test @MainActor func automaticRequestsRespectMinimumSpacing() async throws {
+@Test @MainActor func returningToEarlierPassageAllowsANewExplicitReview() async throws {
     let suite = "CoWritten.tests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
     let probe = Probe()
-    let model = configuredModel(defaults, probe: probe, delay: .milliseconds(10), interval: .milliseconds(500))
+    let model = configuredModel(defaults, probe: probe, delay: .milliseconds(10))
     model.credentialsChanged(authorize: true)
     model.analyze("First passage.", source: "Test")
     try await waitUntil { model.aiReport != nil }
     model.analyze("Second passage.", source: "Test")
-    try await waitUntil { model.report != nil }
-    try await Task.sleep(for: .milliseconds(30))
-    #expect(await probe.captured().count == 1)
     try await waitUntil { model.aiReport != nil }
-    #expect(await probe.captured().count == 2)
+    model.analyze("First passage.", source: "Test")
+    try await waitUntil { model.aiReport != nil }
+    #expect(await probe.captured() == ["First passage.", "Second passage.", "First passage."])
+}
+
+@Test @MainActor func oneUnverifiedQuoteDoesNotMakeRequestedAnalysisUnreadable() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), credentialAvailable: { _, _ in true }, analyzeAI: { _, _, _ in
+        AIReport(summary: "A useful overview.", voice: "Active.", formality: "Neutral.", strengths: [],
+            suggestions: [AISuggestion(excerpt: "Wrong quotation", advice: "Edit this.")], caveat: "Context matters.",
+            aiWriting: AIWritingAssessment(summary: "No patterns.", signals: [], limitations: "Cannot establish authorship."))
+    })
+    model.credentialsChanged(authorize: true)
+    model.analyze("We wrote this passage.", source: "Fixture")
+    try await waitUntil { model.aiReport != nil || !model.aiError.isEmpty }
+    #expect(model.aiError.isEmpty)
+    #expect(model.aiReport?.summary == "A useful overview.")
+    #expect(model.aiReport?.suggestions.isEmpty == true)
+    #expect(!model.reportText.contains("Wrong quotation"))
+    #expect(model.reportText.contains("omitted"))
+}
+
+@Test @MainActor func startupAndMenuBarClicksNeverReadSelectionsEvenWithOldAutomaticPreferences() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    defaults.set(true, forKey: "automatic")
+    defaults.set(true, forKey: "showOnSelection")
+    var reads = 0
+    let probe = Probe()
+    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), selectionRead: {
+        reads += 1
+        return .text("A selected passage.", "Editor")
+    }, credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text) })
+    model.credentialsChanged(authorize: true)
+    model.start()
+    defer { model.stop() }
+    let delegate = AppDelegate(model: model)
+    delegate.statusClicked()
+    // Long enough for both ticks of the old background watcher.
+    try await Task.sleep(for: .milliseconds(1650))
+    #expect(reads == 0)
+    #expect(model.report == nil)
+    #expect(await probe.captured().isEmpty)
+    model.captureSelection()
+    try await waitUntil { model.aiReport != nil }
+    #expect(reads == 1)
+    #expect(await probe.captured() == ["A selected passage."])
+    delegate.statusClicked()
+    try await Task.sleep(for: .milliseconds(80))
+    #expect(reads == 1)
+    #expect(await probe.captured().count == 1)
+}
+
+@Test @MainActor func enablingAIDoesNotSendAnExistingPassage() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let probe = Probe()
+    let model = configuredModel(defaults, probe: probe)
+    model.credentialsChanged(authorize: true)
+    model.aiAutomatic = false
+    model.analyze("Previously analysed locally.", source: "Test")
+    try await waitUntil { model.report != nil }
+    model.aiAutomatic = true
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(await probe.captured().isEmpty)
+    model.analyze("Previously analysed locally.", source: "Explicit request")
+    try await waitUntil { model.aiReport != nil }
+    #expect(await probe.captured().count == 1)
+}
+
+@Test @MainActor func savingCredentialsDuringLocalAnalysisDoesNotSendThatPassage() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let probe = Probe()
+    let model = configuredModel(defaults, probe: probe)
+    model.analyze("A locally requested passage.", source: "Test")
+    // The local task has not yet returned. Setup must not authorise this earlier request retroactively.
+    model.credentialsChanged(authorize: true)
+    try await waitUntil { model.report != nil }
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(await probe.captured().isEmpty)
+    model.analyze("A locally requested passage.", source: "Requested after setup")
+    try await waitUntil { model.aiReport != nil }
+    #expect(await probe.captured().count == 1)
 }

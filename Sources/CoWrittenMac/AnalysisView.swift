@@ -68,8 +68,8 @@ struct AnalysisView: View {
             }
             Divider()
             HStack(spacing: 12) {
-                Circle().fill(model.automatic && model.hasAccessibility ? accent : Color.secondary).frame(width: 6, height: 6)
-                Text(model.automatic ? (model.hasAccessibility ? "Watching selections locally" : "Accessibility permission needed") : "Automatic analysis paused")
+                Circle().fill(model.hasAccessibility ? accent : Color.secondary).frame(width: 6, height: 6)
+                Text(model.hasAccessibility ? "Shortcut only · ⇧⌘L" : "Accessibility permission needed")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button("Paste text…") { paste = true }
@@ -80,7 +80,6 @@ struct AnalysisView: View {
                     }
                     Button("Clear") { model.clear() }
                 }
-                Button(model.automatic ? "Pause" : "Resume") { model.automatic.toggle() }
             }.padding(14)
         }
         .foregroundStyle(ink).background(paper).tint(accent)
@@ -111,7 +110,7 @@ struct AnalysisView: View {
                 } else {
                     Text("This sends the current passage (\(model.report?.wordCount ?? 0) words) to \(model.server), which forwards it to OpenAI. Only send text you are comfortable sharing with those services. OpenAI’s data-retention rules apply.")
                 }
-                Text("Your local analysis stays available. Automatic AI follows your sharing settings.").foregroundStyle(.secondary)
+                Text("Your local analysis stays available. Default AI follows your sharing settings.").foregroundStyle(.secondary)
                 HStack {
                     Spacer()
                     Button("Cancel") { aiConsent = false }
@@ -131,7 +130,7 @@ struct AnalysisView: View {
                     .font(.system(size: 16)).foregroundStyle(.secondary).lineSpacing(5).frame(maxWidth: 630)
                 HStack(alignment: .top, spacing: 28) {
                     feature("1", "Select your words", "Highlight a paragraph in your editor, browser, or email.")
-                    feature("2", "Take a closer look", "Press ⇧⌘L to open the analysis, or click the menu-bar icon.")
+                    feature("2", "Take a closer look", "Press ⇧⌘L to analyse the selected text.")
                     feature("3", "Choose what helps", "Explore patterns and suggestions. Your voice stays yours.")
                 }
                 if !model.message.isEmpty { Text(model.message).font(.callout).foregroundStyle(.secondary) }
@@ -142,7 +141,7 @@ struct AnalysisView: View {
                         model.analyze("We want our writing to feel clear and human. However, the implementation of the new process was delayed by the team. Perhaps we could simplify the explanation in order to help our readers understand what happens next. Thanks for taking the time to share your ideas; your feedback makes this work better.", source: "Example passage")
                     }
                 }
-                Label("Passages stay in memory. No history or analytics. Automatic AI uses your sharing settings.", systemImage: "lock")
+                Label("Passages stay in memory. No history or analytics. AI uses your sharing settings when you request analysis.", systemImage: "lock")
                     .font(.caption).foregroundStyle(accent)
             }.padding(36).frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -287,7 +286,7 @@ struct AnalysisView: View {
             } else {
                 Image(systemName: "sparkles").font(.system(size: 30)).foregroundStyle(accent)
                 Text("Another perspective, when you want it.").font(.system(size: 24, design: .serif))
-                Text(model.aiProvider == .direct ? "AI can consider context, strengths, and practical edits. Add your own OpenAI API key to connect directly from this Mac. Automatic AI reviews selections after they settle, using your sharing settings." : "AI can consider context, strengths, and practical edits. Automatic AI shares selections with your configured Co-written service and OpenAI after you enable sharing.").font(.callout).foregroundStyle(.secondary).lineSpacing(4)
+                Text(model.aiProvider == .direct ? "AI can consider context, strengths, and practical edits. Add your own OpenAI API key to connect directly from this Mac. AI reviews passages only when you request analysis, using your sharing settings." : "AI can consider context, strengths, and practical edits. After you enable sharing, requested passages go to your configured Co-written service and OpenAI.").font(.callout).foregroundStyle(.secondary).lineSpacing(4)
             }
             if model.isRequestingAI { ProgressView("Considering your passage…") }
             if !model.aiError.isEmpty { Text(model.aiError).foregroundStyle(.red).font(.callout) }
@@ -319,9 +318,7 @@ struct SettingsView: View {
                     Button("Open Accessibility Settings") {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") { NSWorkspace.shared.open(url) }
                     }
-                    Toggle("Analyse selections automatically on this Mac", isOn: $model.automatic)
-                    Toggle("Open the menu-bar dropdown when a new selection is analysed", isOn: $model.showOnSelection).disabled(!model.automatic)
-                    Text(model.shortcutAvailable ? "⇧⌘L opens an analysis of the current selection." : "⇧⌘L is already in use. Use the menu-bar command or macOS Services.")
+                    Text(model.shortcutAvailable ? "⇧⌘L analyses the current selection. Selecting text or opening the dropdown does not start analysis." : "⇧⌘L is already in use. Free that shortcut, or explicitly supply text using Paste or macOS Services.")
                         .font(.caption).foregroundStyle(.secondary)
                     Text("No keystrokes are recorded. Secure fields are skipped. Some apps do not expose selected text; use the Services menu or paste a passage.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -331,8 +328,8 @@ struct SettingsView: View {
                     TextEditor(text: $model.exclusions).font(.system(.caption, design: .monospaced)).frame(height: 75)
                 }
                 Section("AI analysis") {
-                    Toggle("Use AI automatically after selections settle", isOn: $model.aiAutomatic)
-                    Text("When enabled with a saved credential and sharing permission, selected and pasted text is sent automatically to your configured AI provider. Direct OpenAI use is billed to your account. New requests wait at least 15 seconds; repeats are suppressed. Pause or disable this to keep new selections local.").font(.caption).foregroundStyle(.secondary)
+                    Toggle("Include AI when I request an analysis", isOn: $model.aiAutomatic)
+                    Text("With a saved credential and sharing permission, AI runs after you press ⇧⌘L or explicitly analyse pasted text. Selecting text, opening the dropdown, or changing settings never sends a passage. Direct OpenAI use is billed to your account. Turn this off for local analysis.").font(.caption).foregroundStyle(.secondary)
                     Picker("Connect using", selection: $model.aiProvider) {
                         Text("Your OpenAI account").tag(AIProvider.direct)
                         Text("A shared Co-written service").tag(AIProvider.sharedService)
@@ -340,7 +337,7 @@ struct SettingsView: View {
                     if model.aiProvider == .direct {
                         SecureField("Your OpenAI API key", text: $token)
                         Text(model.hasDirectKey ? "An API key is saved in this Mac’s Keychain." : "Add your own key to connect directly to OpenAI. No separate server is needed.").font(.caption).foregroundStyle(.secondary)
-                        Text("Your key stays in Keychain on this Mac and is sent only to api.openai.com. Saving your key below enables sharing with OpenAI when automatic AI is on. OpenAI bills usage to your account and its retention rules apply. No key is included in the downloaded app.").font(.caption).foregroundStyle(.secondary)
+                        Text("Your key stays in Keychain on this Mac and is sent only to api.openai.com. Saving your key below allows requested passages to be shared with OpenAI when AI is enabled. OpenAI bills usage to your account and its retention rules apply. No key is included in the downloaded app.").font(.caption).foregroundStyle(.secondary)
                         Link("Manage OpenAI API keys", destination: URL(string: "https://platform.openai.com/api-keys")!)
                     } else {
                         TextField("Server URL", text: $model.server, prompt: Text("https://analysis.example.com"))
@@ -348,7 +345,7 @@ struct SettingsView: View {
                         Text("Use a personal Co-written token from the service owner, rather than an OpenAI key. The token is stored in Keychain and bound to this HTTPS server.").font(.caption).foregroundStyle(.secondary)
                     }
                     HStack {
-                        Button(model.aiAutomatic ? "Save credential & allow automatic AI" : "Save credential") {
+                        Button(model.aiAutomatic ? "Save credential & allow AI" : "Save credential") {
                             do {
                                 let credential = token.trimmingCharacters(in: .whitespacesAndNewlines)
                                 let account: String
@@ -374,11 +371,11 @@ struct SettingsView: View {
                             catch { saved = error.localizedDescription }
                         }
                     }
-                    if model.hasAICredential && !model.automaticAIAllowed {
-                        Text("This saved credential has not been enabled for automatic sharing. Enabling sends selections to this destination and may incur charges.").font(.caption).foregroundStyle(.secondary)
-                        Button("Allow automatic AI at this destination") { model.credentialsChanged(authorize: true) }
+                    if model.hasAICredential && !model.aiSharingAllowed {
+                        Text("AI sharing has not been allowed for this saved credential. Allowing it permits future requested passages to be sent to this destination and may incur charges.").font(.caption).foregroundStyle(.secondary)
+                        Button("Allow AI at this destination") { model.credentialsChanged(authorize: true) }
                     }
-                    if model.automaticAIAllowed { Text("Automatic sharing is allowed for this destination. Turn off automatic AI above to keep selections local.").font(.caption).foregroundStyle(.secondary) }
+                    if model.aiSharingAllowed { Text("AI sharing is allowed for requested passages at this destination. Turn off AI above to keep analysis local.").font(.caption).foregroundStyle(.secondary) }
                     if !saved.isEmpty { Text(saved).font(.caption).foregroundStyle(.secondary) }
                 }
                 Section("General") {

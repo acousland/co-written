@@ -3,10 +3,11 @@ Welcome to Co-written
 1. Drag Co-written into Applications and open it.
 2. Look for the quotation-mark icon in your menu bar.
 3. Open Settings and enable Accessibility if you want to analyse selections across apps.
-4. Select text, then press Shift–Command–L to open the analysis.
+4. Select text, then press Shift–Command–L to analyse it and open the dropdown.
 
-Automatic analysis happens locally. The panel stays closed until you open it unless
-you enable “Open the floating panel” in Settings. Use Pause to stop reading selections.
+Selections are read only when you press Shift–Command–L. Highlighting text does not
+start analysis. Clicking the menu-bar icon opens your last results without reading
+selected text. Expand the dropdown to inspect the detailed view.
 You can also use an app's Services menu → Analyse with Co-written, or paste a passage.
 Some applications do not expose their selected text to macOS Accessibility.
 
@@ -15,15 +16,17 @@ tone cues, sentence rhythm, repetition, and possible ways to simplify a passage.
 Style estimates support English. Results describe patterns rather than prove errors.
 Short passages produce less reliable estimates. Your audience and purpose matter.
 
-Optional AI connects directly to OpenAI. Add your own API key in Settings; it is
-stored in this Mac's Keychain. No separate server is required. Each request asks
-before sharing the passage with OpenAI, and usage is billed to your account. No
-shared key is bundled in the download. Local analysis works without AI.
+AI is included by default when you request analysis, once you add your own OpenAI
+API key in Settings and allow sharing. Your key stays in this Mac's Keychain. Saving
+a key or changing settings never sends an existing passage. Requested passages are
+sent directly to OpenAI and usage is billed to your account; provider retention
+rules apply. Turn off AI in Settings to keep analysis local. No separate server is
+required and no shared key is bundled in the download.
 An optional shared-service mode is available for owner-funded access.
 
 The app keeps only the current passage in memory and has no writing history or telemetry.
-Use Clear to discard it. Background analysis clears it when a selection goes away in
-another app. Password managers are excluded by default, and secure fields are skipped.
+Use Clear, request a new passage, or quit to discard it. Password managers are
+excluded by default, and secure fields are skipped.
 
 Updates are signed and checked before installation. Future releases can use small
 delta downloads; a full download is available if a delta cannot be used.

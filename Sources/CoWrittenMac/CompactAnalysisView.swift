@@ -25,7 +25,7 @@ struct CompactAnalysisView: View {
                 VStack(alignment: .leading, spacing: 15) {
                     if pasting {
                         Text("Paste a passage").font(.headline)
-                        Text("AI is automatic once configured. Pasted text uses the same sharing settings.").font(.caption).foregroundStyle(.secondary)
+                        Text("AI runs when you click Analyse, using your sharing settings.").font(.caption).foregroundStyle(.secondary)
                         TextEditor(text: $draft).font(.body).frame(height: 170).border(.secondary.opacity(0.3))
                         HStack {
                             Button("Cancel") { draft = ""; pasting = false }
@@ -79,7 +79,7 @@ struct CompactAnalysisView: View {
                         Image(systemName: "text.magnifyingglass").font(.system(size: 32)).foregroundStyle(accent).padding(.top, 18)
                         Text("A fresh look at your words.").font(.system(size: 25, design: .serif))
                         Text(model.message).font(.callout).lineSpacing(4)
-                        Text("Explore voice, formality, clarity, and signs of templated writing. AI runs automatically after a selection settles once you save your own key.").font(.callout).foregroundStyle(.secondary).lineSpacing(4)
+                        Text("Press ⇧⌘L to review selected text for voice, formality, clarity, and signs of templated writing. AI is included by default once you save your own key.").font(.callout).foregroundStyle(.secondary).lineSpacing(4)
                         if !model.hasAccessibility { Button("Set up selection access…") { model.showPreferences() } }
                         if !model.hasAICredential { Button("Add your OpenAI key…") { model.showPreferences() } }
                         Button("Try an example") { model.analyze(UIValidation.example, source: "Example passage") }
@@ -95,9 +95,7 @@ struct CompactAnalysisView: View {
                     Button("Clear") { model.clear() }
                 }
                 Spacer()
-                Button { model.automatic.toggle() } label: { Image(systemName: model.automatic ? "pause.fill" : "play.fill") }
-                    .help(model.automatic ? "Pause automatic analysis" : "Resume automatic analysis")
-                    .accessibilityLabel(model.automatic ? "Pause automatic analysis" : "Resume automatic analysis")
+                Text("⇧⌘L").foregroundStyle(.secondary).help("Analyse the current selection")
             }.font(.caption).buttonStyle(.borderless).padding(14)
         }.frame(width: 420, height: 590).background(Color(red: 0.97, green: 0.96, blue: 0.93))
             .foregroundStyle(Color(red: 0.16, green: 0.21, blue: 0.19)).tint(accent).preferredColorScheme(.light)
@@ -108,13 +106,13 @@ struct CompactAnalysisView: View {
         if model.isRequestingAI { ProgressView("AI is reviewing your passage…").font(.caption) }
         else if !model.aiError.isEmpty {
             Text(model.aiError).font(.caption).foregroundStyle(.red)
-            if model.automaticAIAllowed { Button("Retry AI for this passage") { model.requestAI() } }
+            if model.aiSharingAllowed { Button("Retry AI for this passage") { model.requestAI() } }
         } else if model.aiReport != nil { Label("AI perspective · OpenAI", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary) }
-        else if !model.hasAICredential { Button("Add a key for automatic AI…") { model.showPreferences() } }
-        else if !model.automaticAIAllowed { Button("Enable automatic AI sharing…") { model.showPreferences() } }
-        else if model.aiAutomatic && model.automatic { Text("Local results ready · AI review scheduled").font(.caption).foregroundStyle(.secondary) }
-        else { Text("Automatic AI is paused. Open the detailed view for a one-off request.").font(.caption).foregroundStyle(.secondary) }
-        Text("\(model.automatic ? "Selection analysis on" : "Automatic analysis paused") · ⇧⌘L").font(.caption2).foregroundStyle(.secondary)
+        else if !model.hasAICredential { Button("Add a key for AI…") { model.showPreferences() } }
+        else if !model.aiSharingAllowed { Button("Enable AI sharing…") { model.showPreferences() } }
+        else if model.aiAutomatic { Text("Press ⇧⌘L for a new AI review").font(.caption).foregroundStyle(.secondary) }
+        else { Text("AI is off by default. Open the detailed view to request a review.").font(.caption).foregroundStyle(.secondary) }
+        Text("Selection analysis only on ⇧⌘L").font(.caption2).foregroundStyle(.secondary)
     }
     private func metric(_ title: String, _ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {

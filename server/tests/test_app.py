@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from app import Application, Denied, Store, call_openai, validate_report
+from app import Application, Denied, Store, call_openai, validate_report, sanitize_report
 
 
 def report(text):
@@ -128,7 +128,7 @@ class ServiceTests(unittest.TestCase):
             def open(self, request, timeout):
                 payload = json.loads(request.data)
                 self_test.assertFalse(payload["store"])
-                self_test.assertEqual(payload["max_output_tokens"], 2000)
+                self_test.assertEqual(payload["max_output_tokens"], 4096)
                 self_test.assertEqual(payload["input"][1], {"role": "user", "content": passage})
                 self_test.assertTrue(payload["text"]["format"]["strict"])
                 self_test.assertEqual(request.full_url, "https://api.openai.com/v1/responses")
@@ -136,6 +136,58 @@ class ServiceTests(unittest.TestCase):
         self_test = self
         with patch("urllib.request.build_opener", return_value=Opener()):
             self.assertEqual(call_openai(passage, "secret", "fixed-model"), report(passage))
+
+    def test_invalid_quotes_are_omitted_without_losing_the_review(self):
+        passage = "Great question! We wrote this."
+        raw = report(passage)
+        raw["suggestions"].append({"excerpt": "Invented quotation", "advice": "Edit this."})
+        valid_signal = {"patternID": 22, "excerpt": "Great question!", "reason": "Chat wrapper.", "humanAlternative": "Ordinary greeting."}
+        raw["aiWriting"]["signals"] = [valid_signal, dict(valid_signal, excerpt="Another invented quotation"), dict(valid_signal, patternID=True)]
+        safe = sanitize_report(raw, passage)
+        self.assertEqual(safe["summary"], raw["summary"])
+        self.assertEqual(safe["suggestions"], raw["suggestions"][:1])
+        self.assertEqual(safe["aiWriting"]["signals"], [valid_signal])
+        self.assertIn("3 findings were omitted", safe["caveat"])
+        self.assertNotIn("invented quotation", json.dumps(safe).lower())
+        self.assertEqual(len(raw["suggestions"]), 2)
+        self.assertEqual(sanitize_report(safe, passage), safe)
+        validate_report(safe, passage)
+        self.app.upstream = lambda *_: raw
+        status, data, _ = self.request({"text": passage})
+        self.assertEqual(status, 200)
+        self.assertEqual(data, safe)
+
+    def test_fragments_need_not_invent_strengths_or_findings(self):
+        raw = report("Hello.")
+        raw["strengths"], raw["suggestions"] = [], []
+        self.assertEqual(sanitize_report(raw, "Hello."), raw)
+        raw["summary"] = ""
+        with self.assertRaises(ValueError):
+            sanitize_report(raw, "Hello.")
+
+    def test_incomplete_and_refused_replies_have_safe_error_codes(self):
+        responses = [
+            ({"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}}, "output_limit"),
+            ({"status": "incomplete", "incomplete_details": {"reason": "content_filter"}}, "content_filter"),
+            ({"status": "failed"}, "analysis_incomplete"),
+            ({"status": "completed", "output": None}, "invalid_analysis"),
+            ({"status": "completed", "output": [{"type": "message", "content": [{"type": "output_text", "text": "{private unfinished"}]}]}, "invalid_analysis"),
+            ({"status": "completed", "output": [{"type": "message", "content": [{"type": "refusal", "refusal": "private secret text"}]}]}, "analysis_refused"),
+        ]
+        for payload, code in responses:
+            class Opener:
+                def open(self, request, timeout):
+                    return io.BytesIO(json.dumps(payload).encode())
+            with patch("urllib.request.build_opener", return_value=Opener()):
+                with self.assertRaises(Denied) as failure:
+                    call_openai("Private passage", "server-secret", "fixed-model")
+                self.assertEqual(failure.exception.code, code)
+                self.assertNotIn("secret", str(failure.exception))
+                self.app.upstream = call_openai
+                status, data, _ = self.request(token=self.store.issue("error-" + str(responses.index((payload, code)))))
+                self.assertEqual(status, 502)
+                self.assertEqual(data["code"], code)
+                self.assertNotIn("private", json.dumps(data).lower())
 
 
 if __name__ == "__main__":

@@ -14,7 +14,6 @@ import SwiftUI
             defaults.removePersistentDomain(forName: suite)
             defer { defaults.removePersistentDomain(forName: suite) }
             let model = AppModel(defaults: defaults)
-            model.automatic = false
             model.aiAutomatic = false
             try await capture(AnalysisView(model: model), size: NSSize(width: 880, height: 750), to: directory.appendingPathComponent("welcome.png"))
             try await capture(CompactAnalysisView(model: model), size: NSSize(width: 420, height: 590), to: directory.appendingPathComponent("dropdown-welcome.png"))
@@ -24,7 +23,6 @@ import SwiftUI
             try await capture(AnalysisView(model: model, tab: 1, selectedFinding: model.report?.findings.first), size: NSSize(width: 880, height: 750), to: directory.appendingPathComponent("cues.png"))
             try await capture(AnalysisView(model: model, tab: 2), size: NSSize(width: 880, height: 750), to: directory.appendingPathComponent("ai.png"))
             try await capture(SettingsView(model: model), size: NSSize(width: 590, height: 760), to: directory.appendingPathComponent("settings.png"))
-            model.automatic = true
             try await capture(CompactAnalysisView(model: model), size: NSSize(width: 420, height: 590), to: directory.appendingPathComponent("dropdown.png"))
             model.report = WritingAnalyzer.analyze("Great question! At its core, the project plays a crucial role in improving how we work. It is not just a feature but also a change in how teams share ideas. Let that sink in.")
             model.source = "Example passage"
@@ -36,13 +34,19 @@ import SwiftUI
             try await capture(CompactAnalysisView(model: model), size: NSSize(width: 420, height: 590), to: directory.appendingPathComponent("dropdown-ai.png"))
             try await capture(CompactAnalysisView(model: model, tab: 1), size: NSSize(width: 420, height: 590), to: directory.appendingPathComponent("dropdown-ai-signs.png"))
             try await capture(AnalysisView(model: model, tab: 3), size: NSSize(width: 880, height: 750), to: directory.appendingPathComponent("ai-signs.png"))
+            model.aiReport = nil
+            model.aiError = AIClientError.outputLimitReached.localizedDescription
+            try await capture(CompactAnalysisView(model: model), size: NSSize(width: 420, height: 590), to: directory.appendingPathComponent("dropdown-ai-error.png"))
+            model.aiError = ""
+            model.aiReport = try AIReport(summary: "A useful review despite one unverified quotation.", voice: "Active.", formality: "Neutral.", strengths: [], suggestions: [AISuggestion(excerpt: "An invented quotation.", advice: "Edit this.")], caveat: "Context matters.", aiWriting: AIWritingAssessment(summary: "No supported cues.", signals: [], limitations: "Style cannot establish authorship.")).validated(passage: model.report!.text)
+            try await capture(CompactAnalysisView(model: model), size: NSSize(width: 420, height: 590), to: directory.appendingPathComponent("dropdown-ai-sanitized.png"))
             let popover = AppDelegate.makePopover(model: model)
             guard popover.behavior == .transient, popover.contentSize == NSSize(width: 420, height: 590),
                   HumanizerCatalogue.patterns.count == 26 else { throw CocoaError(.coderInvalidValue) }
             guard provider.responds(to: NSSelectorFromString("analyzeSelection:userData:error:")) else {
                 throw NSError(domain: "UIValidation", code: 1, userInfo: [NSLocalizedDescriptionKey: "The macOS Services selector is missing"])
             }
-            print("Rendered twelve app views; verified dropdown configuration, bundled Humanizer catalogue and Services selector. Images: \(directory.path)")
+            print("Rendered fourteen app views; verified dropdown configuration, bundled Humanizer catalogue and Services selector. Images: \(directory.path)")
             exit(0)
         } catch {
             fputs("UI validation failed: \(error.localizedDescription)\n", stderr)

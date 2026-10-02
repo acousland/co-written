@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import LocalAuthentication
 
 struct AIReport: Decodable, Sendable {
     let summary: String
@@ -9,24 +10,51 @@ struct AIReport: Decodable, Sendable {
     let suggestions: [AISuggestion]
     let caveat: String
     let aiWriting: AIWritingAssessment?
-    func validate(passage: String) throws {
+    private func validateStructure() throws {
         guard [summary, voice, formality, caveat].allSatisfy({ !$0.isEmpty && $0.count <= 2_000 }),
-              !strengths.isEmpty, strengths.count <= 6, strengths.allSatisfy({ !$0.isEmpty && $0.count <= 1_000 }),
-              suggestions.count <= 6, suggestions.allSatisfy({ !$0.excerpt.isEmpty && $0.excerpt.count <= 500 && passage.contains($0.excerpt) && !$0.advice.isEmpty && $0.advice.count <= 1_000 }) else {
-            throw AIClientError.invalidResponse
-        }
+              strengths.count <= 6, strengths.allSatisfy({ !$0.isEmpty && $0.count <= 1_000 }),
+              suggestions.count <= 6 else { throw AIClientError.invalidAnalysis }
+        if let aiWriting { try aiWriting.validateStructure() }
+    }
+    func validate(passage: String) throws {
+        try validateStructure()
+        guard suggestions.allSatisfy({ $0.isVerified(in: passage) }) else { throw AIClientError.invalidAnalysis }
         if let aiWriting { try aiWriting.validate(passage: passage) }
+    }
+    /// Keep useful analysis while omitting individual findings whose quoted evidence cannot be verified.
+    func validated(passage: String) throws -> AIReport {
+        try validateStructure()
+        let verifiedSuggestions = suggestions.filter { $0.isVerified(in: passage) }
+        let assessment = aiWriting?.validated(passage: passage)
+        let omitted = suggestions.count - verifiedSuggestions.count + (aiWriting?.signals.count ?? 0) - (assessment?.signals.count ?? 0)
+        let note = omitted == 0 ? caveat : Self.evidenceNote(caveat, omitted: omitted)
+        let report = AIReport(summary: summary, voice: voice, formality: formality, strengths: strengths,
+                              suggestions: verifiedSuggestions, caveat: note, aiWriting: assessment)
+        try report.validate(passage: passage)
+        return report
+    }
+    static func evidenceNote(_ original: String, omitted: Int) -> String {
+        String(original.prefix(1_800)) + "\n\n\(omitted) finding\(omitted == 1 ? " was" : "s were") omitted because the quoted evidence could not be verified against this passage."
     }
 }
 struct AIWritingAssessment: Decodable, Sendable {
     let summary: String
     let signals: [AIWritingSignal]
     let limitations: String
+    fileprivate func validateStructure() throws {
+        guard [summary, limitations].allSatisfy({ !$0.isEmpty && $0.count <= 2_000 }), signals.count <= 6
+        else { throw AIClientError.invalidAnalysis }
+    }
     func validate(passage: String) throws {
-        guard [summary, limitations].allSatisfy({ !$0.isEmpty && $0.count <= 2_000 }), signals.count <= 6,
-            signals.allSatisfy({ (1...26).contains($0.patternID) && !$0.excerpt.isEmpty && $0.excerpt.count <= 500 && passage.contains($0.excerpt) &&
-                !$0.reason.isEmpty && $0.reason.count <= 1_000 && !$0.humanAlternative.isEmpty && $0.humanAlternative.count <= 1_000 })
-        else { throw AIClientError.invalidResponse }
+        try validateStructure()
+        guard signals.allSatisfy({ $0.isVerified(in: passage) }) else { throw AIClientError.invalidAnalysis }
+    }
+    fileprivate func validated(passage: String) -> AIWritingAssessment {
+        let verified = signals.filter { $0.isVerified(in: passage) }
+        let omitted = signals.count - verified.count
+        guard omitted > 0 else { return self }
+        return AIWritingAssessment(summary: "Only observations with verified quoted evidence are shown.", signals: verified,
+                                   limitations: AIReport.evidenceNote(limitations, omitted: omitted))
     }
 }
 struct AIWritingSignal: Decodable, Sendable {
@@ -34,13 +62,21 @@ struct AIWritingSignal: Decodable, Sendable {
     let excerpt: String
     let reason: String
     let humanAlternative: String
+    fileprivate func isVerified(in passage: String) -> Bool {
+        (1...26).contains(patternID) && !excerpt.isEmpty && excerpt.count <= 500 && passage.contains(excerpt) &&
+        !reason.isEmpty && reason.count <= 1_000 && !humanAlternative.isEmpty && humanAlternative.count <= 1_000
+    }
 }
 struct AISuggestion: Decodable, Sendable {
     let excerpt: String
     let advice: String
+    fileprivate func isVerified(in passage: String) -> Bool {
+        !excerpt.isEmpty && excerpt.count <= 500 && passage.contains(excerpt) && !advice.isEmpty && advice.count <= 1_000
+    }
 }
-enum AIClientError: LocalizedError {
-    case invalidEndpoint, missingToken, missingOpenAIKey, rejected(Int), invalidResponse, keychain(OSStatus)
+enum AIClientError: LocalizedError, Equatable {
+    case invalidEndpoint, missingToken, missingOpenAIKey, rejected(Int), invalidResponse, invalidAnalysis, keychain(OSStatus)
+    case outputLimitReached, analysisRefused, analysisFiltered, analysisIncomplete, responseTooLarge
     var errorDescription: String? {
         switch self {
         case .invalidEndpoint: return "Enter the HTTPS URL of your Co-written analysis server."
@@ -49,7 +85,13 @@ enum AIClientError: LocalizedError {
         case .rejected(401): return "Your AI credential was not accepted. Check it in Settings."
         case .rejected(429): return "The AI service has reached a usage limit. Local analysis remains available."
         case .rejected: return "The AI service is unavailable. Try again later."
-        case .invalidResponse: return "The AI service returned an unreadable result."
+        case .invalidResponse: return "The AI reply could not be read. Retry this passage; local analysis is still available."
+        case .invalidAnalysis: return "The AI reply did not contain a usable analysis. Retry this passage; local analysis is still available."
+        case .outputLimitReached: return "OpenAI stopped before completing the analysis because the reply reached its length limit. Try a shorter selection or retry."
+        case .analysisRefused: return "OpenAI declined to analyse this passage. Your local analysis is still available."
+        case .analysisFiltered: return "OpenAI's content filter interrupted this analysis. Your local analysis is still available."
+        case .analysisIncomplete: return "OpenAI did not finish the analysis. Retry this passage; local analysis is still available."
+        case .responseTooLarge: return "The AI reply was too large to process. Try a shorter selection."
         case .keychain: return "Your AI credential could not be saved in the macOS Keychain."
         }
     }
@@ -59,8 +101,13 @@ enum SecureAIStore {
     private static func query(_ endpoint: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: endpoint]
     }
-    static func load(endpoint: String) -> String? {
+    static func load(endpoint: String, allowInteraction: Bool = true) -> String? {
         var q = query(endpoint)
+        if !allowInteraction {
+            let context = LAContext()
+            context.interactionNotAllowed = true
+            q[kSecUseAuthenticationContext as String] = context
+        }
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var value: CFTypeRef?
@@ -114,14 +161,26 @@ enum AIClient {
         guard let token = SecureAIStore.load(endpoint: url.absoluteString), !token.isEmpty else { throw AIClientError.missingToken }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 50
+        request.timeoutInterval = 75
         request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(["text": text])
         let data = try await send(request)
-        let report = try JSONDecoder().decode(AIReport.self, from: data)
-        try report.validate(passage: text)
-        return report
+        let report: AIReport
+        do { report = try JSONDecoder().decode(AIReport.self, from: data) }
+        catch { throw AIClientError.invalidAnalysis }
+        return try report.validated(passage: text)
+    }
+    static func analysisFailure(code: String) -> AIClientError? {
+        switch code {
+        case "output_limit": return .outputLimitReached
+        case "analysis_refused": return .analysisRefused
+        case "content_filter": return .analysisFiltered
+        case "analysis_incomplete": return .analysisIncomplete
+        case "invalid_analysis": return .invalidAnalysis
+        case "response_too_large": return .responseTooLarge
+        default: return nil
+        }
     }
     static func send(_ request: URLRequest) async throws -> Data {
         let configuration = URLSessionConfiguration.ephemeral
@@ -132,8 +191,13 @@ enum AIClient {
         defer { session.invalidateAndCancel() }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw AIClientError.invalidResponse }
-        guard http.statusCode == 200 else { throw AIClientError.rejected(http.statusCode) }
-        guard data.count <= 64_000 else { throw AIClientError.invalidResponse }
+        guard http.statusCode == 200 else {
+            if http.statusCode == 502, data.count <= 200_000,
+               let code = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["code"] as? String,
+               let error = analysisFailure(code: code) { throw error }
+            throw AIClientError.rejected(http.statusCode)
+        }
+        guard data.count <= 200_000 else { throw AIClientError.responseTooLarge }
         return data
     }
 }

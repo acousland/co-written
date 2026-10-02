@@ -1,12 +1,9 @@
-# Co-written 0.2.0
+# Co-written 0.2.1
 
-- A compact dropdown from the menu-bar icon by default, also opened by Shift–Command–L and the macOS Service. An expand button opens the detailed view; right-click the icon for app commands.
-- AI review on by default once you save your own OpenAI API key and allow sharing. Keys stay in this Mac’s Keychain. Existing saved credentials get a one-time automatic-sharing choice.
-- Automatic AI waits for settled text, suppresses repeated requests, spaces requests by at least 15 seconds, and cancels stale work. Pause and automatic-AI settings give you control; offline analysis remains available.
-- A new AI signs tab based on Humanizer 3.1.0’s 26-pattern catalogue, with local cues and contextual AI review. Each finding quotes its evidence and explains possible human uses. Style cues cannot establish authorship, and no AI probability is shown.
-- Copied reports include local and AI advice and the Humanizer review.
-- Developer ID signed, Apple notarised universal DMG for macOS 14+, with signed Sparkle updates and a delta from 0.1.0 when smaller than a full download.
+- Selection analysis runs only when you press **⇧⌘L**. The background watcher is removed, including for upgrades with old automatic-analysis settings. Clicking the menu-bar icon only opens the dropdown.
+- AI stays on by default for requested analyses when your own key and sharing permission are configured. Saving credentials or changing settings never sends an existing passage. Paste and macOS Services remain explicit ways to supply text.
+- More reliable AI reviews for short passages: concise bounded output, a larger reply budget, and individual unverified quotations omitted with a visible note instead of rejecting the whole review.
+- Clear error messages for unfinished, truncated, filtered, refused and malformed AI replies; explicit retries work. Local analysis remains available.
+- Signed and notarised universal macOS app, packaged in a DMG with signed Sparkle delta updates.
 
-Automatic AI sends selected and pasted text to your configured provider and may incur API charges. Disable it or pause analysis to keep new selections local. Each downloader supplies their own key; no shared key is bundled. Provider retention rules apply. Live OpenAI calls have not been tested with a real key; automated validation uses mocks.
-
-Humanizer is MIT licensed by Siqi Chen; its pinned catalogue and licence are included. This is editorial review rather than an authorship classifier.
+Each downloader supplies their own OpenAI key, stored in their Mac’s Keychain. Requested AI reviews send the passage to the configured provider and may incur API charges. No shared key is bundled. Provider retention rules apply. Automated validation uses mocked replies; a real OpenAI call could not be tested without a saved key.

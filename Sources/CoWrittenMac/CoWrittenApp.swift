@@ -9,13 +9,19 @@ import SwiftUI
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    let model = AppModel()
+    let model: AppModel
+    override init() { model = AppModel(); super.init() }
+    init(model: AppModel) { self.model = model; super.init() }
     private var statusItem: NSStatusItem?
     private var panel: NSPanel?
     private var settingsPanel: NSPanel?
     private var popover: NSPopover?
     private let shortcut = GlobalShortcut()
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if ProcessInfo.processInfo.arguments.contains("--ai-check") {
+            Task { await AIValidation.run() }
+            return
+        }
         if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--ui-check"),
            ProcessInfo.processInfo.arguments.count > index + 1 {
             Task { await UIValidation.run(output: ProcessInfo.processInfo.arguments[index + 1], provider: self) }
@@ -46,7 +52,7 @@ import SwiftUI
             defaults.set(true, forKey: "onboarded")
         }
         if ProcessInfo.processInfo.arguments.contains("--demo") {
-            model.automatic = false
+            model.aiAutomatic = false
             model.analyze("We want our writing to feel clear and human. However, the implementation of the new process was delayed by the team. Perhaps we could simplify the explanation in order to help our readers understand what happens next. Thanks for taking the time to share your ideas; your feedback makes this work better.", source: "Example passage")
             openPopover()
         }
@@ -59,12 +65,10 @@ import SwiftUI
         return dropdown
     }
     @objc func statusClicked() {
-        if NSApp.currentEvent?.type == .rightMouseUp {
+        if NSApp?.currentEvent?.type == .rightMouseUp {
             popover?.performClose(nil)
             let menu = NSMenu()
-            menu.addItem(withTitle: "Analyse Selected Text", action: #selector(capture), keyEquivalent: "")
             menu.addItem(withTitle: "Open Detailed View", action: #selector(openPanel), keyEquivalent: "")
-            menu.addItem(withTitle: model.automatic ? "Pause Automatic Analysis" : "Resume Automatic Analysis", action: #selector(toggleAutomatic), keyEquivalent: "")
             menu.addItem(.separator())
             menu.addItem(withTitle: "Settings…", action: #selector(settings), keyEquivalent: ",")
             menu.addItem(withTitle: "Check for Updates…", action: #selector(checkUpdates), keyEquivalent: "")
@@ -75,7 +79,6 @@ import SwiftUI
             statusItem?.button?.performClick(nil)
             statusItem?.menu = nil
         } else if popover?.isShown == true { popover?.performClose(nil) }
-        else if model.report == nil { model.captureSelection() }
         else { openPopover() }
     }
     @objc func openPopover() {
@@ -102,9 +105,8 @@ import SwiftUI
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    @objc func capture() { model.captureSelection() }
-    @objc func toggleAutomatic() { model.automatic.toggle() }
     @objc func settings() {
+        model.hasAccessibility = model.reader.trusted
         popover?.performClose(nil)
         if settingsPanel == nil {
             let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 590, height: 760),
