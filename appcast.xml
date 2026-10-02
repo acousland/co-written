@@ -1,4 +1,4 @@
-<?xml version="1.0" standalone="yes"?>
+<?xml version="1.0" encoding="utf-8"?>
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>Co-written</title>
@@ -45,7 +45,7 @@ English style analysis uses explainable heuristics. It can miss patterns or flag
 
 The app is self-sufficient. Optional AI requires your own OpenAI API key in Settings; no separate server is needed. A protected backend is also provided as an optional alternative for owner-funded access. No live OpenAI call was made during initial validation.
 ]]></description>
-            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.0/Co-written-0.1.0.dmg" length="2351286" type="application/octet-stream" sparkle:edSignature="oQ2D9zf8uIW6SQSpX4CmFKijnTjvycdDFc4TEnwe3u/ES0EtVvfxHjhxvtcjeA8A/XQu6fYJjsZ+cNhOQsJIBA=="/>
+            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.1.0/Co-written-0.1.0.dmg" length="2351286" type="application/octet-stream" sparkle:edSignature="oQ2D9zf8uIW6SQSpX4CmFKijnTjvycdDFc4TEnwe3u/ES0EtVvfxHjhxvtcjeA8A/XQu6fYJjsZ+cNhOQsJIBA=="/>
         </item>
     </channel>
 </rss>

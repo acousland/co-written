@@ -25,5 +25,6 @@ bin=".build/artifacts/sparkle/Sparkle/bin"
 "$bin/generate_appcast" --account co-written --versions "$build" --maximum-versions 3 --maximum-deltas 3 \
   --download-url-prefix "https://github.com/$repo/releases/download/v$version/" \
   --embed-release-notes "$archives"
+python3 scripts/fix-appcast-urls.py "$archives/appcast.xml" "$repo"
 python3 scripts/verify-appcast.py "$archives/appcast.xml" "$version" "$build"
 cp "$archives/appcast.xml" dist/appcast.xml
