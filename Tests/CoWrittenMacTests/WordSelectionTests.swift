@@ -5,6 +5,14 @@ import Testing
 @testable import CoWrittenMac
 
 private func code(_ text: String) -> UInt32 { text.utf8.reduce(0) { ($0 << 8) | UInt32($1) } }
+@Test @MainActor func wordDocumentCaptureDoesNotReadRememberedTextFromSearchOrFormattingFields() {
+    #expect(WordSelectionReader.isDocumentSelection(role: kAXTextAreaRole, hasSelectedText: false))
+    #expect(WordSelectionReader.isDocumentSelection(role: kAXLayoutAreaRole, hasSelectedText: true))
+    #expect(!WordSelectionReader.isDocumentSelection(role: kAXTextFieldRole, hasSelectedText: true))
+    #expect(!WordSelectionReader.isDocumentSelection(role: kAXComboBoxRole, hasSelectedText: true))
+    #expect(!WordSelectionReader.isDocumentSelection(role: nil, hasSelectedText: true))
+    #expect(!WordSelectionReader.isDocumentSelection(role: kAXButtonRole, hasSelectedText: false))
+}
 @Test @MainActor func wordQueryReadsOnlyContentOfTheSelectionTextRange() throws {
     var specifier = WordSelectionReader.selectionSpecifier()
     for expected in ["1650", "wTxR", "sele"] {

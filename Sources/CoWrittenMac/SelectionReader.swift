@@ -45,8 +45,12 @@ enum SelectionResult {
         if app.bundleIdentifier == WordSelectionReader.bundleID {
             var role: CFTypeRef?
             _ = AXUIElementCopyAttributeValue(focused, kAXRoleAttribute as CFString, &role)
-            guard (role as? String) == kAXTextAreaRole || !(selection as? String ?? "").isEmpty else { return .unavailable }
-            return WordSelectionReader.read(from: app, prompt: allowAutomationPrompt)
+            let name = role as? String
+            // Ribbon, search and formatting fields use their own selection, not the document's.
+            if name != kAXTextFieldRole && name != kAXComboBoxRole {
+                guard WordSelectionReader.isDocumentSelection(role: name, hasSelectedText: !(selection as? String ?? "").isEmpty) else { return .unavailable }
+                return WordSelectionReader.read(from: app, prompt: allowAutomationPrompt)
+            }
         }
         guard let text = selection as? String,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .unavailable }

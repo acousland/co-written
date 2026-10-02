@@ -6,6 +6,10 @@ import CoWrittenCore
 /// Read its selection text range directly using the properties documented in Word.sdef.
 @MainActor enum WordSelectionReader {
     static let bundleID = "com.microsoft.Word"
+    static func isDocumentSelection(role: String?, hasSelectedText: Bool) -> Bool {
+        if role == kAXTextAreaRole { return true }
+        return hasSelectedText && (role == kAXLayoutAreaRole || role == kAXStaticTextRole)
+    }
     static func permission(for app: NSRunningApplication, prompt: Bool) -> OSStatus {
         let target = NSAppleEventDescriptor(processIdentifier: app.processIdentifier)
         return AEDeterminePermissionToAutomateTarget(target.aeDesc, AEEventClass(kAECoreSuite), AEEventID(kAEGetData), prompt)
