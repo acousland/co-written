@@ -8,6 +8,13 @@ struct CompactFeature: Identifiable {
     let value: String
     let detail: String
 }
+struct CompactStyleFeature: Identifiable {
+    let id: Int
+    let icon: String
+    let title: String
+    let count: Int
+    let detail: String
+}
 enum CompactSummary {
     static func features(_ report: WritingReport, ai: AIReport?) -> [CompactFeature] {
         let quick = ai?.quickLook?.verified
@@ -28,13 +35,66 @@ enum CompactSummary {
             guard let (icon, title) = labels[kind] else { continue }
             rows.append(CompactFeature(id: kind, icon: icon, title: title, value: "\(findings.count) cue\(findings.count == 1 ? "" : "s")", detail: findings.map(\.excerpt).joined(separator: " · ")))
         }
-        let local = report.aiStyle.signals.map { finding in
-            let id = finding.kind.split(separator: ":").first?.split(separator: " ").last.map(String.init) ?? finding.kind
-            return id + ":" + finding.excerpt.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        let contextual = (ai?.aiWriting?.signals ?? []).map { String($0.patternID) + ":" + $0.excerpt.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) }
-        let count = Set(local + contextual).count
-        rows.append(CompactFeature(id: "ai-style", icon: "sparkles", title: "AI-like style", value: count == 0 ? "No cues found" : "\(count) cue\(count == 1 ? "" : "s")", detail: "Style cues cannot establish authorship. Open the full app for quoted evidence and possible human explanations."))
         return rows
+    }
+    /// Group supported local and AI observations by pattern, retaining their exact evidence.
+    static func styleFeatures(_ report: WritingReport, ai: AIReport?) -> [CompactStyleFeature] {
+        struct Evidence { let range: NSRange; let excerpt: String; let explanation: String }
+        var evidence: [Int: [Evidence]] = [:]
+        func add(_ id: Int, range: NSRange, excerpt: String, explanation: String) {
+            guard (1...26).contains(id), !excerpt.isEmpty else { return }
+            var entries = evidence[id, default: []]
+            if !entries.contains(where: { NSIntersectionRange($0.range, range).length > 0 }) {
+                entries.append(Evidence(range: range, excerpt: excerpt, explanation: explanation))
+            }
+            evidence[id] = entries
+        }
+        for finding in report.aiStyle.signals {
+            guard let id = finding.kind.split(separator: ":").first?.split(separator: " ").last.flatMap({ Int($0) }) else { continue }
+            add(id, range: NSRange(location: finding.start, length: finding.length), excerpt: finding.excerpt, explanation: finding.explanation)
+        }
+        for signal in ai?.aiWriting?.signals ?? [] {
+            guard let range = report.text.range(of: signal.excerpt), !signal.excerpt.isEmpty else { continue }
+            add(signal.patternID, range: NSRange(range, in: report.text), excerpt: signal.excerpt,
+                explanation: signal.reason + "\nHuman explanation: " + signal.humanAlternative)
+        }
+        return evidence.keys.sorted().map { id in
+            let display = styleDisplay(id)
+            let entries = evidence[id]!
+            return CompactStyleFeature(id: id, icon: display.icon, title: display.title, count: entries.count,
+                detail: HumanizerCatalogue.name(id) + "\n\n" + entries.prefix(3).map { "“\($0.excerpt)”\n\($0.explanation)" }.joined(separator: "\n\n") +
+                    (entries.count > 3 ? "\n\nOpen the full app for all \(entries.count) occurrences." : ""))
+        }
+    }
+    static func styleDisplay(_ id: Int) -> (icon: String, title: String) {
+        switch id {
+        case 1: ("arrow.left.arrow.right", "Formulaic contrast")
+        case 2: ("text.append", "Dramatic close")
+        case 3: ("lightbulb", "Vague profundity")
+        case 4: ("hourglass", "Staged opening")
+        case 5: ("bubble.left.and.bubble.right", "Phantom objections")
+        case 6: ("list.number", "Forced triads")
+        case 7: ("repeat", "Repeated rhythm")
+        case 8: ("minus", "Dash overuse")
+        case 9: ("cloud", "Stacked hedges")
+        case 10: ("link", "Hyphen overuse")
+        case 11: ("person.crop.circle.badge.questionmark", "Missing actors")
+        case 12: ("textformat.abc", "Stock wording")
+        case 13: ("arrow.up.right", "Inflated claims")
+        case 14: ("point.3.connected.trianglepath.dotted", "Vague connections")
+        case 15: ("text.badge.plus", "Shallow add-ons")
+        case 16: ("megaphone", "Sales language")
+        case 17: ("person.2", "Unnamed authority")
+        case 18: ("text.badge.checkmark", "Showy verbs")
+        case 19: ("bold", "Decorative bold")
+        case 20: ("textformat.size", "Decorative headings")
+        case 21: ("quote.opening", "Curly quotes")
+        case 22: ("bubble.left", "Chat residue")
+        case 23: ("exclamationmark.bubble", "Model disclaimers")
+        case 24: ("doc.on.doc", "Heading echo")
+        case 25: ("doc.text", "Document chatter")
+        case 26: ("arrow.uturn.backward", "Over-explaining")
+        default: ("sparkles", "Style pattern")
+        }
     }
 }

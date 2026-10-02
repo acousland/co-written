@@ -117,7 +117,8 @@ import SwiftUI
     /// Runs only while the full window is open and not minimised or hidden.
     func observeSelection() {
         guard expandedMode else { return }
-        hasAccessibility = selectionPermission?() ?? reader.trusted
+        let allowed = selectionPermission?() ?? reader.trusted
+        if hasAccessibility != allowed { hasAccessibility = allowed }
         guard hasAccessibility else { selectionCandidate = ""; cancelAI(); return }
         switch selectionRead?() ?? reader.read() {
         case let .text(text, app):

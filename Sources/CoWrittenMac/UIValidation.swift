@@ -16,44 +16,77 @@ import SwiftUI
             let model = AppModel(defaults: defaults, selectionRead: { .unavailable })
             model.aiAutomatic = false
             try await captureFull(AnalysisView(model: model), size: NSSize(width: 960, height: 760), to: directory.appendingPathComponent("welcome.png"))
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown-welcome.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-welcome.png"))
             model.report = WritingAnalyzer.analyze(example)
             model.source = "Example passage"
             try await captureFull(AnalysisView(model: model), size: NSSize(width: 960, height: 760), to: directory.appendingPathComponent("overview.png"))
             try await captureFull(AnalysisView(model: model, tab: 1, selectedFinding: model.report?.findings.first), size: NSSize(width: 960, height: 760), to: directory.appendingPathComponent("cues.png"))
             try await captureFull(AnalysisView(model: model, tab: 2), size: NSSize(width: 960, height: 760), to: directory.appendingPathComponent("ai.png"))
             try await capture(SettingsView(model: model), size: NSSize(width: 590, height: 760), to: directory.appendingPathComponent("settings.png"))
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown.png"))
+            try await captureFull(AnalysisView(model: model), size: NSSize(width: 640, height: 760), to: directory.appendingPathComponent("overview-narrow.png"))
+            try await captureFull(AnalysisView(model: model, tab: 1, selectedFinding: model.report?.findings.first), size: NSSize(width: 420, height: 680), to: directory.appendingPathComponent("cues-minimum.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown.png"))
             model.report = WritingAnalyzer.analyze("Great question! At its core, the project plays a crucial role in improving how we work. It is not just a feature but also a change in how teams share ideas. Let that sink in.")
             model.source = "Example passage"
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown-signs.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-signs.png"))
             model.isRequestingAI = true
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown-loading.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-loading.png"))
             model.isRequestingAI = false
             model.aiReport = AIReport(summary: "Friendly and explanatory, with a few stock rhetorical phrases that could be more specific.", voice: "Mostly active grammatical voice; a conversational narrator addressing the reader.", formality: "Neutral to conversational.", strengths: ["The intended benefit to teams is easy to identify."], suggestions: [AISuggestion(excerpt: "plays a crucial role", advice: "Name the concrete change this project makes for a team.")], caveat: "This short sample gives limited context.", aiWriting: AIWritingAssessment(summary: "A cluster of stock framing and a dramatic closer is worth reviewing.", signals: [AIWritingSignal(patternID: 2, excerpt: "Let that sink in.", reason: "This closer asks the reader to pause without adding information.", humanAlternative: "A human writer may use it deliberately for emphasis.")], limitations: "Style cannot establish authorship; edited, human and AI-assisted writing overlap."))
             model.aiReport?.quickLook = AIQuickLook(voice: "Active, conversational", formality: "Neutral", tone: "Friendly")
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown-ai.png"))
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown-ai-signs.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-ai.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-ai-signs.png"))
             try await captureFull(AnalysisView(model: model, tab: 3), size: NSSize(width: 960, height: 760), to: directory.appendingPathComponent("ai-signs.png"))
             model.aiReport = nil
             model.aiError = AIClientError.outputLimitReached.localizedDescription
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown-ai-error.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-ai-error.png"))
             model.aiError = ""
             model.aiReport = try AIReport(summary: "A useful review despite one unverified quotation.", voice: "Active.", formality: "Neutral.", strengths: [], suggestions: [AISuggestion(excerpt: "An invented quotation.", advice: "Edit this.")], caveat: "Context matters.", aiWriting: AIWritingAssessment(summary: "No supported cues.", signals: [], limitations: "Style cannot establish authorship.")).validated(passage: model.report!.text)
-            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report), to: directory.appendingPathComponent("dropdown-ai-sanitized.png"))
+            try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-ai-sanitized.png"))
             try await capture(AnalysisView(model: model).preferredColorScheme(.dark), size: NSSize(width: 960, height: 760), to: directory.appendingPathComponent("overview-dark.png"), appearance: .darkAqua)
+            try await capture(AnalysisView(model: model).preferredColorScheme(.dark), size: NSSize(width: 640, height: 760), to: directory.appendingPathComponent("overview-narrow-dark.png"), appearance: .darkAqua)
+            try await verifyWindowSizing(model: model, provider: provider)
+            model.report = nil; model.aiReport = nil
+            try await captureFull(AnalysisView(model: model), size: NSSize(width: 420, height: 680), to: directory.appendingPathComponent("welcome-minimum.png"))
             let popover = AppDelegate.makePopover(model: model)
-            guard popover.behavior == .transient, popover.contentSize == CompactAnalysisView.size(for: model.report),
+            guard popover.behavior == .transient, popover.contentSize == CompactAnalysisView.size(for: model.report, ai: model.aiReport),
                   HumanizerCatalogue.patterns.count == 26 else { throw CocoaError(.coderInvalidValue) }
             guard provider.responds(to: NSSelectorFromString("analyzeSelection:userData:error:")) else {
                 throw NSError(domain: "UIValidation", code: 1, userInfo: [NSLocalizedDescriptionKey: "The macOS Services selector is missing"])
             }
-            print("Rendered fifteen app views; verified dropdown configuration, bundled Humanizer catalogue and Services selector. Images: \(directory.path)")
+            for pattern in HumanizerCatalogue.patterns {
+                guard NSImage(systemSymbolName: CompactSummary.styleDisplay(pattern.id).icon, accessibilityDescription: nil) != nil else {
+                    throw NSError(domain: "UIValidation", code: 3, userInfo: [NSLocalizedDescriptionKey: "Missing icon for Humanizer \(pattern.id)"])
+                }
+            }
+            print("Rendered nineteen app views; verified narrow-window sizing, all pattern icons, dropdown configuration, bundled Humanizer catalogue and Services selector. Images: \(directory.path)")
             exit(0)
         } catch {
             fputs("UI validation failed: \(error.localizedDescription)\n", stderr)
             exit(1)
         }
+    }
+    private static func verifyWindowSizing(model: AppModel, provider: AppDelegate) async throws {
+        let window = provider.makeFullWindow(model: model)
+        defer { window.contentView = nil; window.close() }
+        let initialReport = model.report
+        let initialAI = model.aiReport
+        defer { model.report = initialReport; model.aiReport = initialAI }
+        for width in [960.0, 800, 799, 640, 420, 640, 799, 800, 960] {
+            window.setContentSize(NSSize(width: width, height: 680))
+            let requestedFrame = window.frame
+            for step in 0..<3 {
+                model.report = step == 1 ? nil : initialReport
+                model.aiReport = step == 1 ? nil : initialAI
+                window.contentView?.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(80))
+                guard window.frame == requestedFrame, window.contentMinSize == NSSize(width: 420, height: 440),
+                      abs((window.contentView?.bounds.width ?? 0) - width) < 1 else {
+                    throw NSError(domain: "UIValidation", code: 2, userInfo: [NSLocalizedDescriptionKey: "Window sizing validation at \(width): requested \(requestedFrame), actual \(window.frame), minimum \(window.contentMinSize), content \(window.contentView?.bounds ?? .zero)"])
+                }
+            }
+        }
+        print("Window size stayed fixed across nine resizes and 27 content changes (420–960 points).")
     }
     private static func captureFull(_ root: AnalysisView, size: NSSize, to url: URL) async throws {
         root.model.setExpandedMode(true)
@@ -62,6 +95,7 @@ import SwiftUI
     }
     private static func capture<V: View>(_ root: V, size: NSSize, to url: URL, appearance: NSAppearance.Name = .aqua) async throws {
         let view = NSHostingView(rootView: root.background(Color(nsColor: .windowBackgroundColor)))
+        view.sizingOptions = []
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: appearance)
         window.contentView = view

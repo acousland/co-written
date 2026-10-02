@@ -53,8 +53,8 @@ import Combine
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         statusItem = item
         popover = Self.makePopover(model: model)
-        reportObservation = model.$report.sink { [weak self] report in
-            self?.popover?.contentSize = CompactAnalysisView.size(for: report)
+        reportObservation = model.$report.combineLatest(model.$aiReport).sink { [weak self] report, ai in
+            self?.popover?.contentSize = CompactAnalysisView.size(for: report, ai: ai)
         }
         model.present = { [weak self] in
             guard let self else { return }
@@ -111,8 +111,10 @@ import Combine
     static func makePopover(model: AppModel) -> NSPopover {
         let dropdown = NSPopover()
         dropdown.behavior = .transient
-        dropdown.contentSize = CompactAnalysisView.size(for: model.report)
-        dropdown.contentViewController = NSHostingController(rootView: CompactAnalysisView(model: model))
+        dropdown.contentSize = CompactAnalysisView.size(for: model.report, ai: model.aiReport)
+        let controller = NSHostingController(rootView: CompactAnalysisView(model: model))
+        controller.sizingOptions = []
+        dropdown.contentViewController = controller
         return dropdown
     }
     @objc func statusClicked() {
@@ -141,30 +143,41 @@ import Combine
     @objc func openPanel() {
         popover?.performClose(nil)
         if panel == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 760),
-                                 styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
-            window.title = "Co-written"
-            window.minSize = NSSize(width: 730, height: 580)
-            window.delegate = self
-            window.titlebarAppearsTransparent = true
-            window.toolbarStyle = .unified
-            let toolbar = NSToolbar(identifier: "CoWrittenFullWindow")
-            toolbar.delegate = self
-            toolbar.displayMode = .iconOnly
-            toolbar.allowsUserCustomization = false
-            window.toolbar = toolbar
-            window.isReleasedWhenClosed = false
-            window.isRestorable = false
-            window.collectionBehavior = [.fullScreenPrimary]
-            window.contentView = NSHostingView(rootView: AnalysisView(model: model))
-            window.center()
-            panel = window
+            panel = makeFullWindow(model: model)
+            panel?.center()
         }
         NSApp.setActivationPolicy(.regular)
         if panel?.isMiniaturized == true { panel?.deminiaturize(nil) }
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         model.setExpandedMode(true)
+    }
+    func makeFullWindow(model: AppModel) -> NSWindow {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 760),
+                             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+        window.title = "Co-written"
+        window.delegate = self
+        window.titlebarAppearsTransparent = true
+        window.toolbarStyle = .unified
+        let toolbar = NSToolbar(identifier: "CoWrittenFullWindow")
+        toolbar.delegate = self
+        toolbar.displayMode = .iconOnly
+        toolbar.allowsUserCustomization = false
+        window.toolbar = toolbar
+        window.isReleasedWhenClosed = false
+        window.isRestorable = false
+        window.collectionBehavior = [.fullScreenPrimary]
+        let content = NSHostingView(rootView: AnalysisView(model: model))
+        // AppKit owns the user's window size. SwiftUI must not rewrite its limits during tiling.
+        content.sizingOptions = []
+        content.autoresizingMask = [.width, .height]
+        let container = NSView(frame: window.contentView?.bounds ?? .zero)
+        content.frame = container.bounds
+        container.addSubview(content)
+        // A plain content view also prevents the host from clearing the window's size limits.
+        window.contentView = container
+        window.contentMinSize = NSSize(width: 420, height: 440)
+        return window
     }
     @objc func settings() {
         model.hasAccessibility = model.reader.trusted

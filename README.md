@@ -28,10 +28,12 @@ These are cues to consider, not errors to fix. Formal writing is not inherently 
 1. Drag the app from the DMG into Applications and open it. It starts silently with only a menu-bar icon; no Settings window or first-run popup opens.
 2. Click the quotation-mark menu-bar icon to open the dropdown, then its gear to open Settings. Grant Accessibility for selection reading.
 3. In menu-bar-only mode, select text in another app and press **⇧⌘L** to analyse it and open the dropdown. Selecting text alone does not start analysis in this mode. Clicking the menu-bar icon opens your last results without reading any selection. Add your own OpenAI key in Settings to include AI by default when you request analysis.
-4. The dropdown shows voice, formality, tone, perspective, reading ease and matched cues on one page. Click **Full app** for **Overview**, **Writing cues**, **AI perspective** and **AI signs**. Cue cards highlight evidence. **Copy report** includes local and AI findings.
+4. The dropdown shows voice, formality, tone, perspective and reading ease, followed by icons naming each matched AI-style pattern. Hover over a pattern for its quoted evidence and explanation. All features fit on one page. Click **Full app** for **Overview**, **Writing cues**, **AI perspective** and **AI signs**. The full window adapts to narrow and half-screen layouts, stacking the passage above the analysis. Cue cards highlight evidence. **Copy report** includes local and AI findings.
 5. While the full window is open, highlighting text in another app updates the review after the selection settles. Closing, hiding or minimising that window stops watching and returns to shortcut-only operation.
 
 You can exclude apps by bundle identifier and start the app at login. Secure fields and default password-manager exclusions are skipped. Some apps do not expose selected text; use **Services → Analyse with Co-written** or **Paste text** in the panel. No simulated Copy operation or keystroke recording is used.
+
+![Co-written in a narrow window](docs/overview-narrow.png)
 
 ## Humanizer review
 

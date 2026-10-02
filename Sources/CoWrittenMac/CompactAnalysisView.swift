@@ -4,9 +4,11 @@ import SwiftUI
 
 struct CompactAnalysisView: View {
     @ObservedObject var model: AppModel
-    static func size(for report: WritingReport?) -> NSSize {
+    static func size(for report: WritingReport?, ai: AIReport? = nil) -> NSSize {
         guard let report else { return NSSize(width: 360, height: 280) }
-        return NSSize(width: 360, height: 184 + 24 * CompactSummary.features(report, ai: nil).count + (report.wordCount < 50 ? 14 : 0))
+        let patterns = CompactSummary.styleFeatures(report, ai: ai).count
+        let styleHeight = patterns == 0 ? 30 : 30 + 28 * ((patterns + 1) / 2)
+        return NSSize(width: 360, height: 160 + 24 * CompactSummary.features(report, ai: ai).count + styleHeight + (report.wordCount < 50 ? 14 : 0))
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -35,6 +37,7 @@ struct CompactAnalysisView: View {
                         }.font(.system(size: 12)).frame(height: 24).help(feature.detail)
                     }
                 }.padding(.horizontal, 16).padding(.top, 7)
+                styleFeatures(report).padding(.horizontal, 16).padding(.top, 10)
                 if report.wordCount < 50 { Text("Short sample · tentative cues").font(.caption2).foregroundStyle(.secondary).padding(.top, 4) }
             } else {
                 VStack(spacing: 12) {
@@ -55,7 +58,33 @@ struct CompactAnalysisView: View {
                 }
                 Button("Full app") { model.expand?() }
             }.font(.caption).buttonStyle(.borderless).padding(14)
-        }.frame(width: Self.size(for: model.report).width, height: Self.size(for: model.report).height).tint(.accentColor)
+        }.frame(width: Self.size(for: model.report, ai: model.aiReport).width, height: Self.size(for: model.report, ai: model.aiReport).height).tint(.accentColor)
+    }
+    @ViewBuilder private func styleFeatures(_ report: WritingReport) -> some View {
+        let features = CompactSummary.styleFeatures(report, ai: model.aiReport)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label("AI-style patterns", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                if features.isEmpty { Text(report.supportsStyleAnalysis ? "None found" : "English only").font(.caption).foregroundStyle(.secondary) }
+            }.help("Style cues can occur in human and AI writing; they cannot establish authorship.")
+            if !features.isEmpty {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 4) {
+                    ForEach(features) { feature in
+                        HStack(spacing: 6) {
+                            Image(systemName: feature.icon).foregroundStyle(.tint).frame(width: 16)
+                            Text(feature.title).lineLimit(1).minimumScaleFactor(0.85)
+                            Spacer(minLength: 0)
+                            if feature.count > 1 { Text("\(feature.count)").foregroundStyle(.secondary) }
+                        }.font(.system(size: 11)).padding(.horizontal, 7).frame(height: 24)
+                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                            .help(feature.detail)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(feature.title), \(feature.count) matched cue\(feature.count == 1 ? "" : "s")")
+                    }
+                }
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
     @ViewBuilder private var status: some View {
         if !model.aiError.isEmpty {

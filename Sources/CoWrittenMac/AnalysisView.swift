@@ -20,70 +20,61 @@ struct AnalysisView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("Co-written").font(.headline)
-                Spacer()
-                Label(model.isRequestingAI ? "AI reviewing" : (model.aiReport == nil ? "On-device" : "AI + local"), systemImage: model.aiReport == nil && !model.isRequestingAI ? "lock.shield" : "sparkles")
-                    .font(.caption).foregroundStyle(.secondary)
-            }.padding(.horizontal, 20).padding(.vertical, 12)
-            Divider()
-            if let report = model.report {
-                HStack(alignment: .top, spacing: 0) {
-                    passage(report).frame(minWidth: 230, idealWidth: 275, maxWidth: 310)
-                    Divider()
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 22) {
-                            HStack {
-                                Text("Your writing, at a glance").font(.system(size: 23, weight: .medium, design: .serif))
-                                Spacer()
-                                if model.isAnalyzing { ProgressView().controlSize(.small) }
-                            }
-                            Text(report.summary).foregroundStyle(.secondary).font(.callout)
-                            Picker("Analysis view", selection: $tab) {
-                                Text("Overview").tag(0)
-                                Text("Writing cues (\(report.findings.count))").tag(1)
-                                Text("AI perspective").tag(2)
-                                Text("AI signs").tag(3)
-                            }.pickerStyle(.segmented).labelsHidden()
-                            switch tab {
-                            case 1: findings(report)
-                            case 2: aiView(report)
-                            case 3: AIStyleView(report: report, assessment: model.aiReport?.aiWriting)
-                            default: overview(report)
-                            }
-                            Text(report.caveat).font(.caption).foregroundStyle(.secondary).lineSpacing(3)
-                        }.padding(24)
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Co-written").font(.headline)
+                    Spacer()
+                    Label(model.isRequestingAI ? "AI reviewing" : (model.aiReport == nil ? "On-device" : "AI + local"), systemImage: model.aiReport == nil && !model.isRequestingAI ? "lock.shield" : "sparkles")
+                        .font(.caption).foregroundStyle(.secondary)
+                }.padding(.horizontal, 20).padding(.vertical, 12)
+                Divider()
+                if let report = model.report {
+                    if geometry.size.width < 800 {
+                        VStack(spacing: 0) {
+                            passage(report, compact: true)
+                                .frame(height: min(210, max(150, geometry.size.height * 0.28)))
+                            Divider()
+                            analysis(report, compact: true)
+                        }
+                    } else {
+                        HStack(alignment: .top, spacing: 0) {
+                            passage(report).frame(width: min(310, geometry.size.width * 0.3))
+                            Divider()
+                            analysis(report, compact: false).frame(minWidth: 0, maxWidth: .infinity)
+                        }
                     }
+                } else {
+                    welcome(compact: geometry.size.width < 800)
                 }
-            } else {
-                welcome
+                Divider()
+                HStack(spacing: 12) {
+                    Circle().fill(model.hasAccessibility ? accent : Color.secondary).frame(width: 6, height: 6)
+                    Text(model.hasAccessibility ? (model.expandedMode ? "Mouse selection on" : "Shortcut only · ⇧⌘L") : "Selection access needed")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        .help(model.expandedMode ? "Close, hide or minimise this window to return to shortcut-only analysis." : "Enable Accessibility in Settings to read selected text.")
+                    Spacer()
+                    if model.report != nil {
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(model.reportText, forType: .string)
+                        } label: { Label("Copy report", systemImage: "doc.on.doc").labelStyle(.iconOnly) }.help("Copy report")
+                        Button("Clear") { model.clear() }
+                    }
+                }.padding(14)
             }
-            Divider()
-            HStack(spacing: 12) {
-                Circle().fill(model.hasAccessibility ? accent : Color.secondary).frame(width: 6, height: 6)
-                Text(model.hasAccessibility ? (model.expandedMode ? "Mouse selection on · close window for shortcut only" : "Shortcut only · ⇧⌘L") : "Accessibility permission needed")
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                if model.report != nil {
-                    Button("Copy report") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(model.reportText, forType: .string)
-                    }
-                    Button("Clear") { model.clear() }
-                }
-            }.padding(14)
+            .foregroundStyle(ink).background(paper).tint(accent)
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .foregroundStyle(ink).background(paper).tint(accent)
         .sheet(isPresented: $model.showSettings) { SettingsView(model: model).frame(width: 590) }
         .sheet(isPresented: $model.showPaste) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Give your words a fresh look").font(.title2).fontWeight(.medium)
                 Text("Paste a passage here. Local analysis works without Accessibility permission.").foregroundStyle(.secondary)
-                TextEditor(text: $draft).font(.system(size: 15)).frame(width: 600, height: 280)
+                TextEditor(text: $draft).font(.system(size: 15)).frame(height: 240)
                     .overlay(RoundedRectangle(cornerRadius: 5).stroke(.secondary.opacity(0.3)))
                 HStack {
-                    Text("Up to 20,000 characters · English style estimates").font(.caption).foregroundStyle(.secondary)
+                    Text("Up to 20,000 characters").font(.caption).foregroundStyle(.secondary)
                     Spacer()
                     Button("Cancel") { draft = ""; model.showPaste = false }
                     Button("Analyse") {
@@ -91,7 +82,7 @@ struct AnalysisView: View {
                         draft = ""; model.showPaste = false
                     }.keyboardShortcut(.defaultAction).disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-            }.padding(24)
+            }.padding(24).frame(minWidth: 340, idealWidth: 600, maxWidth: 600)
         }
         .sheet(isPresented: $aiConsent) {
             VStack(alignment: .leading, spacing: 18) {
@@ -112,29 +103,63 @@ struct AnalysisView: View {
         .onChange(of: model.report?.text) { _, _ in selectedFinding = nil }
     }
 
-    private var welcome: some View {
+    private func analysis(_ report: WritingReport, compact: Bool) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                HStack {
+                    Text("Your writing, at a glance").font(.system(size: compact ? 21 : 23, weight: .medium, design: .serif))
+                    Spacer()
+                    if model.isAnalyzing { ProgressView().controlSize(.small) }
+                }
+                Text(report.summary).foregroundStyle(.secondary).font(.callout)
+                Picker("Analysis view", selection: $tab) {
+                    Text("Overview").tag(0)
+                    Text(compact ? "Cues (\(report.findings.count))" : "Writing cues (\(report.findings.count))").tag(1)
+                    Text(compact ? "AI review" : "AI perspective").tag(2)
+                    Text("AI signs").tag(3)
+                }.pickerStyle(.segmented).labelsHidden()
+                switch tab {
+                case 1: findings(report)
+                case 2: aiView(report)
+                case 3: AIStyleView(report: report, assessment: model.aiReport?.aiWriting)
+                default: overview(report)
+                }
+                Text(report.caveat).font(.caption).foregroundStyle(.secondary).lineSpacing(3)
+            }.padding(compact ? 18 : 24).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+    private func welcome(compact: Bool) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 Text("Understand the writing\nyou already have.")
-                    .font(.system(size: 38, weight: .medium, design: .serif)).lineSpacing(3)
+                    .font(.system(size: compact ? 30 : 38, weight: .medium, design: .serif)).lineSpacing(3)
                 Text("While this window is open, highlight text in your editor or browser to review its voice, formality, clarity, and rhythm. Close the window to return to shortcut-only analysis in the menu bar.")
                     .font(.system(size: 16)).foregroundStyle(.secondary).lineSpacing(5).frame(maxWidth: 630)
-                HStack(alignment: .top, spacing: 28) {
-                    feature("1", "Select your words", "Highlight a paragraph in your editor, browser, or email.")
-                    feature("2", "Take a closer look", "While this window is open, highlighting text in another app updates the analysis.")
-                    feature("3", "Choose what helps", "Explore patterns and suggestions. Your voice stays yours.")
+                if compact {
+                    VStack(alignment: .leading, spacing: 20) { welcomeFeatures }
+                } else {
+                    HStack(alignment: .top, spacing: 28) { welcomeFeatures }
                 }
                 if !model.message.isEmpty && model.message != "Select text in another app, then press ⇧⌘L." { Text(model.message).font(.callout).foregroundStyle(.secondary) }
-                HStack {
-                    Button("Set up selection access") { model.showPreferences() }.buttonStyle(.borderedProminent)
-                    Button("Paste a passage") { model.showPaste = true }
-                    Button("Try an example") {
-                        model.analyze("We want our writing to feel clear and human. However, the implementation of the new process was delayed by the team. Perhaps we could simplify the explanation in order to help our readers understand what happens next. Thanks for taking the time to share your ideas; your feedback makes this work better.", source: "Example passage")
-                    }
+                ViewThatFits(in: .horizontal) {
+                    HStack { welcomeActions }
+                    VStack(alignment: .leading) { welcomeActions }
                 }
                 Label("Mouse selections use your AI sharing settings while this window is open.", systemImage: "cursorarrow.rays")
                     .font(.caption).foregroundStyle(accent)
-            }.padding(36).frame(maxWidth: .infinity, alignment: .leading)
+            }.padding(compact ? 22 : 36).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+    @ViewBuilder private var welcomeFeatures: some View {
+        feature("1", "Select your words", "Highlight a paragraph in your editor, browser, or email.")
+        feature("2", "Take a closer look", "While this window is open, highlighting text in another app updates the analysis.")
+        feature("3", "Choose what helps", "Explore patterns and suggestions. Your voice stays yours.")
+    }
+    @ViewBuilder private var welcomeActions: some View {
+        Button("Set up selection access") { model.showPreferences() }.buttonStyle(.borderedProminent)
+        Button("Paste a passage") { model.showPaste = true }
+        Button("Try an example") {
+            model.analyze("We want our writing to feel clear and human. However, the implementation of the new process was delayed by the team. Perhaps we could simplify the explanation in order to help our readers understand what happens next. Thanks for taking the time to share your ideas; your feedback makes this work better.", source: "Example passage")
         }
     }
     private func feature(_ number: String, _ title: String, _ detail: String) -> some View {
@@ -144,26 +169,30 @@ struct AnalysisView: View {
             Text(detail).font(.callout).foregroundStyle(.secondary).lineSpacing(3)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
-    private func passage(_ report: WritingReport) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func passage(_ report: WritingReport, compact: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 8 : 14) {
             HStack {
                 Text("THE PASSAGE").font(.system(size: 10, weight: .semibold)).tracking(1.8)
                 Spacer()
-                Image(systemName: "doc.text").foregroundStyle(.secondary)
+                if compact {
+                    Text("\(report.wordCount) words · \(report.language)").font(.caption).foregroundStyle(.secondary)
+                } else { Image(systemName: "doc.text").foregroundStyle(.secondary) }
             }
             Text(model.source).font(.caption).foregroundStyle(.secondary)
             ScrollView {
                 Text(highlighted(report)).font(.system(size: 16, design: .serif)).lineSpacing(6)
                     .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
             }
-            Divider()
-            HStack {
-                Text("\(report.wordCount) words")
-                Spacer()
-                Text(report.readingSeconds < 60 ? "\(report.readingSeconds)s read" : "\(Int(ceil(Double(report.readingSeconds) / 60))) min read")
-            }.font(.caption).foregroundStyle(.secondary)
-            Text(report.language).font(.caption).foregroundStyle(.secondary)
-        }.padding(22).background(Color(nsColor: .textBackgroundColor))
+            if !compact {
+                Divider()
+                HStack {
+                    Text("\(report.wordCount) words")
+                    Spacer()
+                    Text(report.readingSeconds < 60 ? "\(report.readingSeconds)s read" : "\(Int(ceil(Double(report.readingSeconds) / 60))) min read")
+                }.font(.caption).foregroundStyle(.secondary)
+                Text(report.language).font(.caption).foregroundStyle(.secondary)
+            }
+        }.padding(compact ? 18 : 22).background(Color(nsColor: .textBackgroundColor))
     }
     private func highlighted(_ report: WritingReport) -> AttributedString {
         var result = AttributedString(report.text)

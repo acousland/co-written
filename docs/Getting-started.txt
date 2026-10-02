@@ -6,9 +6,12 @@ Welcome to Co-written
 4. Select text, then press Shift–Command–L to analyse it and open the dropdown.
 
 In menu-bar-only mode, selections are read only when you press Shift–Command–L.
-The dropdown shows icons and short feature labels on one page. Clicking the icon
+The dropdown shows icons and short feature labels on one page, including a named
+icon for each matched AI-style pattern. Hover over it for the quoted evidence.
+Clicking the menu-bar icon
 opens your last results without reading selected text. Choose Full app for detail.
 While the full window is open, mouse selections in other apps update the analysis.
+Narrow windows stack the passage above the analysis to fit beside your editor.
 Closing, hiding or minimising the full window stops watching selections.
 You can also use an app's Services menu → Analyse with Co-written, or paste a passage.
 Some applications do not expose their selected text to macOS Accessibility.
