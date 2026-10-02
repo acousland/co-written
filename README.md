@@ -25,7 +25,7 @@ These are cues to consider, not errors to fix. Formal writing is not inherently 
 
 ## Use it
 
-1. Drag the app from the DMG into Applications and open it.
+1. Drag the app from the DMG into Applications and open it. It starts silently with only a menu-bar icon; no Settings window or first-run popup opens.
 2. Click the quotation-mark menu-bar icon to open the dropdown, then its gear to open Settings. Grant Accessibility for selection reading.
 3. Select text in another app and press **⇧⌘L** to analyse it and open the dropdown. Selecting text alone never starts analysis. Clicking the menu-bar icon opens your last results without reading any selection. Add your own OpenAI key in Settings to include AI by default when you request analysis.
 4. Explore **Overview**, **AI signs**, and **Writing cues**. The expand button opens the larger analysis window, where cue cards highlight evidence. **Copy report** includes local and AI findings.
@@ -61,7 +61,8 @@ scripts/build-app.sh
 Open `dist/Co-written.app`. The universal build uses Swift Package Manager, AppKit, SwiftUI, Apple's NaturalLanguage framework, and pinned Sparkle 2.10.0. Open `Package.swift` in Xcode if preferred. A developer build can be ad hoc signed; a public release requires the owner's Developer ID certificate, notarisation credentials, and Sparkle private signing key in Keychain.
 
 ```sh
-# Local UI snapshots and packaging checks
+# Verify silent startup, then render local UI snapshots
+dist/Co-written.app/Contents/MacOS/CoWrittenMac --startup-check
 dist/Co-written.app/Contents/MacOS/CoWrittenMac --ui-check dist/ui
 # Build, notarise, package and prepare the signed feed without publishing
 scripts/prepare-release.sh

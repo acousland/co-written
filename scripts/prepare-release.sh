@@ -7,6 +7,7 @@ xcrun notarytool history --keychain-profile "$notary_profile" >/dev/null
 swift test
 PYTHONPATH=server python3 -m unittest discover -s server/tests
 scripts/build-app.sh
+dist/Co-written.app/Contents/MacOS/CoWrittenMac --startup-check
 dist/Co-written.app/Contents/MacOS/CoWrittenMac --ui-check dist/ui
 scripts/check-delta.sh
 scripts/notarize.sh app

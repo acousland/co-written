@@ -1,10 +1,25 @@
 import AppKit
 import SwiftUI
 
-@main struct CoWrittenApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    var body: some Scene {
-        Settings { SettingsView(model: delegate.model).frame(width: 580) }
+@main enum CoWrittenApp {
+    @MainActor static func main() {
+        let application = CoWrittenApplication.shared
+        let delegate = AppDelegate()
+        application.delegate = delegate
+        application.mainMenu = delegate.makeMainMenu()
+        application.setActivationPolicy(.accessory)
+        // AppKit owns launch; SwiftUI only renders views explicitly opened from the menu bar.
+        withExtendedLifetime(delegate) { application.run() }
+    }
+}
+
+@objc(CoWrittenApplication)
+@MainActor final class CoWrittenApplication: NSApplication {
+    // Discard window restoration requests, including Settings saved by the former SwiftUI lifecycle.
+    override func restoreWindow(withIdentifier identifier: NSUserInterfaceItemIdentifier, state: NSCoder,
+                                completionHandler: @escaping (NSWindow?, (any Error)?) -> Void) -> Bool {
+        completionHandler(nil, nil)
+        return true
     }
 }
 
@@ -46,16 +61,44 @@ import SwiftUI
         model.start()
         NSApp.servicesProvider = self
         NSUpdateDynamicServices()
-        let defaults = UserDefaults.standard
-        if !defaults.bool(forKey: "onboarded") {
-            openPopover()
-            defaults.set(true, forKey: "onboarded")
-        }
         if ProcessInfo.processInfo.arguments.contains("--demo") {
             model.aiAutomatic = false
             model.analyze("We want our writing to feel clear and human. However, the implementation of the new process was delayed by the team. Perhaps we could simplify the explanation in order to help our readers understand what happens next. Thanks for taking the time to share your ideas; your feedback makes this work better.", source: "Example passage")
             openPopover()
         }
+        if ProcessInfo.processInfo.arguments.contains("--startup-check") {
+            Task { await StartupValidation.run(provider: self) }
+        }
+    }
+    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool { true }
+    func applicationShouldHandleReopen(_ app: NSApplication, hasVisibleWindows flag: Bool) -> Bool { false }
+    var hasMenuBarItem: Bool { statusItem?.button != nil }
+    var menuBarWindow: NSWindow? { statusItem?.button?.window }
+    func makeMainMenu() -> NSMenu {
+        let menu = NSMenu()
+        let appItem = NSMenuItem()
+        let appMenu = NSMenu(title: "Co-written")
+        let preferences = appMenu.addItem(withTitle: "Settings…", action: #selector(settings), keyEquivalent: ",")
+        preferences.target = self
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Quit Co-written", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appItem.submenu = appMenu
+        menu.addItem(appItem)
+
+        // Retain standard editing shortcuts in the hosted SwiftUI text and secure fields.
+        let editItem = NSMenuItem()
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editItem.submenu = editMenu
+        menu.addItem(editItem)
+        return menu
     }
     static func makePopover(model: AppModel) -> NSPopover {
         let dropdown = NSPopover()
@@ -96,6 +139,7 @@ import SwiftUI
             window.minSize = NSSize(width: 730, height: 580)
             window.level = .floating
             window.isReleasedWhenClosed = false
+            window.isRestorable = false
             window.hidesOnDeactivate = false
             window.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
             window.contentView = NSHostingView(rootView: AnalysisView(model: model))
@@ -114,6 +158,7 @@ import SwiftUI
             window.title = "Co-written settings"
             window.delegate = self
             window.isReleasedWhenClosed = false
+            window.isRestorable = false
             window.contentView = NSHostingView(rootView: SettingsView(model: model))
             window.center()
             settingsPanel = window

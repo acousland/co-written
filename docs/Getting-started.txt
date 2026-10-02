@@ -1,7 +1,7 @@
 Welcome to Co-written
 
 1. Drag Co-written into Applications and open it.
-2. Look for the quotation-mark icon in your menu bar.
+2. The app starts silently. Look for the quotation-mark icon in your menu bar.
 3. Open Settings and enable Accessibility if you want to analyse selections across apps.
 4. Select text, then press Shift–Command–L to analyse it and open the dropdown.
 

@@ -7,7 +7,7 @@ path, version, build, feed = sys.argv[1:]
 info = {
     "CFBundleName": "Co-written", "CFBundleDisplayName": "Co-written",
     "CFBundleIdentifier": "au.com.acousland.CoWritten", "CFBundleExecutable": "CoWrittenMac",
-    "CFBundlePackageType": "APPL", "CFBundleShortVersionString": version,
+    "CFBundlePackageType": "APPL", "NSPrincipalClass": "CoWrittenApplication", "CFBundleShortVersionString": version,
     "CFBundleVersion": build, "CFBundleIconFile": "CoWritten",
     "LSMinimumSystemVersion": "14.0", "LSUIElement": True, "NSHighResolutionCapable": True,
     "NSHumanReadableCopyright": "Copyright © 2026 Aaron Cousland. MIT licence.",
