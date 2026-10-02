@@ -3,6 +3,28 @@
     <channel>
         <title>Co-written</title>
         <item>
+            <title>0.2.1</title>
+            <pubDate>Fri, 02 Oct 2026 10:25:51 +1000</pubDate>
+            <sparkle:version>1790900675</sparkle:version>
+            <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Co-written 0.2.1
+
+- Selection analysis runs only when you press **⇧⌘L**. The background watcher is removed, including for upgrades with old automatic-analysis settings. Clicking the menu-bar icon only opens the dropdown.
+- AI stays on by default for requested analyses when your own key and sharing permission are configured. Saving credentials or changing settings never sends an existing passage. Paste and macOS Services remain explicit ways to supply text.
+- More reliable AI reviews for short passages: concise bounded output, a larger reply budget, and individual unverified quotations omitted with a visible note instead of rejecting the whole review.
+- Clear error messages for unfinished, truncated, filtered, refused and malformed AI replies; explicit retries work. Local analysis remains available.
+- Signed and notarised universal macOS app, packaged in a DMG with signed Sparkle delta updates.
+
+Each downloader supplies their own OpenAI key, stored in their Mac’s Keychain. Requested AI reviews send the passage to the configured provider and may incur API charges. No shared key is bundled. Provider retention rules apply. Automated validation uses mocked replies; a real OpenAI call could not be tested without a saved key.
+]]></description>
+            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.1/Co-written-0.2.1.dmg" length="2550254" type="application/octet-stream" sparkle:edSignature="cb7n9/Fl1drtfndFrK2b911cp5D7hgsWCb9UrBk2dFX29WFMgqK8WXPDrpIoJ2AOAx4LgZyDsTkFn7lC4UafCw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.1/Co-written1790900675-1790899559.delta" sparkle:deltaFrom="1790899559" length="248562" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4t22sn76jKJiyRO6TxBS3ApBBElwJSM5XkooCZLdmyZUjDZ20NBPx0YZcjuVboLNgH31AS1jLQIpz8IGzdQ0Cg=="/>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.1/Co-written1790900675-1790898615.delta" sparkle:deltaFrom="1790898615" length="432894" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="DTpOv6cKGaWacBNsacuPLqEp6EnF/vzYL3jTffiz2PLtDDGcGv/BZ26hT64pvuvRCXMxAl6V4zm2RrwFZC5aAQ=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.2.0</title>
             <pubDate>Fri, 02 Oct 2026 10:07:23 +1000</pubDate>
             <sparkle:version>1790899559</sparkle:version>
