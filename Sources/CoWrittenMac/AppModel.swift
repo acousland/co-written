@@ -1,5 +1,6 @@
 import AppKit
 import CoWrittenCore
+import CryptoKit
 import ServiceManagement
 import Sparkle
 import SwiftUI
@@ -12,6 +13,8 @@ import SwiftUI
     @Published var hasAccessibility = false
     @Published var shortcutAvailable = true
     @Published var showSettings = false
+    @Published var showPaste = false
+    @Published private(set) var expandedMode = false
     @Published var aiReport: AIReport?
     @Published var aiError = ""
     @Published var isRequestingAI = false
@@ -37,6 +40,12 @@ import SwiftUI
     private let analyzeAI: @Sendable (String, AIProvider, String) async throws -> AIReport
     private let credentialAvailable: @MainActor (AIProvider, String) -> Bool
     private let aiDelay: Duration
+    private let selectionPermission: (@MainActor () -> Bool)?
+    private let mouseAIMinimumInterval: Duration
+    private var lastAIRequest: ContinuousClock.Instant?
+    private var selectionTimer: Timer?
+    private var selectionCandidate = ""
+    private var lastObservedSelection = ""
     private let selectionRead: (@MainActor () -> SelectionResult)?
     private var pendingAI: Task<Void, Never>?
     var destination: String? { aiProvider == .direct ? DirectOpenAI.account : try? AIClient.tokenAccount(server) }
@@ -56,6 +65,7 @@ import SwiftUI
 
     init(defaults: UserDefaults = .standard, aiDelay: Duration = .milliseconds(150),
          selectionRead: (@MainActor () -> SelectionResult)? = nil,
+         selectionPermission: (@MainActor () -> Bool)? = nil, mouseAIMinimumInterval: Duration = .seconds(15),
          credentialAvailable: @escaping @MainActor (AIProvider, String) -> Bool = { provider, server in
              if provider == .direct { return SecureAIStore.exists(endpoint: DirectOpenAI.account) }
              guard let endpoint = try? AIClient.tokenAccount(server) else { return false }
@@ -67,6 +77,8 @@ import SwiftUI
          }) {
         self.aiDelay = aiDelay
         self.selectionRead = selectionRead
+        self.selectionPermission = selectionPermission
+        self.mouseAIMinimumInterval = mouseAIMinimumInterval
         self.credentialAvailable = credentialAvailable
         self.analyzeAI = analyzeAI
         self.defaults = defaults
@@ -80,17 +92,62 @@ import SwiftUI
         refreshExclusions()
     }
     func start() {
-        hasAccessibility = reader.trusted
+        hasAccessibility = selectionPermission?() ?? reader.trusted
         if Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil {
             updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         }
     }
-    func stop() { generation += 1; localTask?.cancel(); cancelAI() }
+    func stop() { setExpandedMode(false); generation += 1; localTask?.cancel(); cancelAI() }
     private func refreshExclusions() {
         reader.excludedBundleIDs = Set(exclusions.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
     }
+    func setExpandedMode(_ enabled: Bool) {
+        guard expandedMode != enabled else { return }
+        expandedMode = enabled
+        selectionTimer?.invalidate(); selectionTimer = nil
+        selectionCandidate = ""; lastObservedSelection = ""
+        if enabled {
+            let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.observeSelection() }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            selectionTimer = timer
+        } else { cancelAI() }
+    }
+    /// Runs only while the full window is open and not minimised or hidden.
+    func observeSelection() {
+        guard expandedMode else { return }
+        hasAccessibility = selectionPermission?() ?? reader.trusted
+        guard hasAccessibility else { selectionCandidate = ""; cancelAI(); return }
+        switch selectionRead?() ?? reader.read() {
+        case let .text(text, app):
+            let bounded = String(text.prefix(WritingAnalyzer.maximumCharacters + 1))
+            let identity = SHA256.hash(data: Data((app + "\n" + bounded).utf8)).map { String(format: "%02x", $0) }.joined()
+            guard identity == selectionCandidate else {
+                selectionCandidate = identity
+                if report?.text != String(bounded.prefix(WritingAnalyzer.maximumCharacters)) { cancelAI() }
+                return
+            }
+            guard identity != lastObservedSelection else { return }
+            lastObservedSelection = identity
+            analyze(bounded, source: app, fromMouseSelection: true)
+        case .excluded:
+            selectionCandidate = ""; lastObservedSelection = ""
+            if report != nil || isAnalyzing || isRequestingAI { clear() }
+            message = "This app or secure field is excluded from selection analysis."
+        case .permissionRequired:
+            selectionCandidate = ""; cancelAI()
+        case .unavailable:
+            selectionCandidate = ""
+            // Clicking our own window retains the requested review. Deselecting elsewhere cancels sharing.
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+                lastObservedSelection = ""
+                cancelAI()
+            }
+        }
+    }
     func captureSelection() {
-        hasAccessibility = reader.trusted
+        hasAccessibility = selectionPermission?() ?? reader.trusted
         switch selectionRead?() ?? reader.read() {
         case let .text(text, app): analyze(text, source: app)
         case .permissionRequired: clear(); message = "Enable Accessibility in Settings to read a selection. You can also paste text here."
@@ -99,12 +156,14 @@ import SwiftUI
         }
         present?()
     }
-    func analyze(_ text: String, source: String) {
+    func analyze(_ text: String, source: String, fromMouseSelection: Bool = false) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { clear(); return }
         let bounded = String(text.prefix(WritingAnalyzer.maximumCharacters + 1))
         if report?.text == String(bounded.prefix(WritingAnalyzer.maximumCharacters)), !isAnalyzing {
             self.source = source
-            scheduleAI()
+            // An explicit request replaces a mouse request waiting for its spacing interval.
+            if !fromMouseSelection { pendingAI?.cancel(); pendingAI = nil }
+            scheduleAI(mouseSelection: fromMouseSelection)
             return
         }
         generation += 1
@@ -119,9 +178,10 @@ import SwiftUI
         localTask = Task { [weak self] in
             let report = await Task.detached(priority: .userInitiated) { WritingAnalyzer.analyze(bounded) }.value
             guard !Task.isCancelled, let self, self.generation == current else { return }
-            self.report = report
             self.isAnalyzing = false
-            if self.configurationGeneration == configuration { self.scheduleAI() }
+            guard !fromMouseSelection || self.expandedMode else { return }
+            self.report = report
+            if self.configurationGeneration == configuration { self.scheduleAI(mouseSelection: fromMouseSelection) }
         }
     }
     func clear() {
@@ -151,16 +211,23 @@ import SwiftUI
         hasDirectKey = credentialAvailable(.direct, "")
         resetAIConfiguration()
     }
-    private func scheduleAI() {
+    private func scheduleAI(mouseSelection: Bool = false) {
         guard aiAutomatic, aiSharingAllowed, let report, !isRequestingAI,
               aiReport == nil, pendingAI == nil else { return }
         let current = generation
         let delay = aiDelay
+        let lastRequest = lastAIRequest
+        let interval = mouseAIMinimumInterval
         pendingAI = Task { [weak self] in
             do {
                 try await Task.sleep(for: delay)
+                if mouseSelection, let lastRequest {
+                    let remaining = interval - lastRequest.duration(to: .now)
+                    if remaining > .zero { try await Task.sleep(for: remaining) }
+                }
                 guard !Task.isCancelled, let self, self.generation == current,
-                      self.aiAutomatic, self.aiSharingAllowed, self.report?.text == report.text else { return }
+                      self.aiAutomatic, self.aiSharingAllowed, self.report?.text == report.text,
+                      !mouseSelection || self.expandedMode else { return }
                 self.pendingAI = nil
                 self.requestAI(defaultRequest: true)
             } catch { /* A new request or settings change cancelled pending work. */ }
@@ -174,6 +241,7 @@ import SwiftUI
         let server = self.server
         let provider = aiProvider
         let analyzeAI = self.analyzeAI
+        lastAIRequest = .now
         isRequestingAI = true; aiError = ""
         aiTask = Task { [weak self] in
             do {
@@ -190,7 +258,7 @@ import SwiftUI
         }
     }
     func showPreferences() {
-        hasAccessibility = reader.trusted
+        hasAccessibility = selectionPermission?() ?? reader.trusted
         if let openSettings { openSettings() } else { showSettings = true }
     }
     func setLaunchAtLogin(_ enabled: Bool) {

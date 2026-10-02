@@ -110,3 +110,18 @@ private func envelope(status: String = "completed", excerpt: String = "We wrote"
     #expect(AIClient.analysisFailure(code: "invalid_analysis") == .invalidAnalysis)
     #expect(AIClient.analysisFailure(code: "private passage sk-test-secret") == nil)
 }
+
+@Test func directRepliesDecodeSuccinctLabelsWithoutRequiringThemFromOlderServices() throws {
+    let encoded = try envelope()
+    var root = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    var output = try #require(root["output"] as? [[String: Any]])
+    var content = try #require(output[0]["content"] as? [[String: Any]])
+    var report = try #require(JSONSerialization.jsonObject(with: Data((content[0]["text"] as! String).utf8)) as? [String: Any])
+    report["quickLook"] = ["voice": "Active", "formality": "Neutral", "tone": "Warm"]
+    content[0]["text"] = String(data: try JSONSerialization.data(withJSONObject: report), encoding: .utf8)
+    output[0]["content"] = content
+    root["output"] = output
+    let result = try DirectOpenAI.decode(JSONSerialization.data(withJSONObject: root), passage: "We wrote a passage.")
+    #expect(result.quickLook?.voice == "Active")
+    #expect(try DirectOpenAI.decode(encoded, passage: "We wrote a passage.").quickLook == nil)
+}

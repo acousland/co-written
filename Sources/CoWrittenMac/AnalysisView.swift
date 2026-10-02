@@ -2,13 +2,12 @@ import AppKit
 import CoWrittenCore
 import SwiftUI
 
-private let ink = Color(red: 0.16, green: 0.21, blue: 0.19)
-private let accent = Color(red: 0.27, green: 0.40, blue: 0.31)
-private let paper = Color(red: 0.97, green: 0.96, blue: 0.93)
+private let ink = Color.primary
+private let accent = Color.accentColor
+private let paper = Color(nsColor: .windowBackgroundColor)
 
 struct AnalysisView: View {
     @ObservedObject var model: AppModel
-    @State private var paste = false
     @State private var draft = ""
     @State private var tab = 0
     @State private var aiConsent = false
@@ -22,18 +21,12 @@ struct AnalysisView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 14) {
-                Image(systemName: "text.quote").font(.system(size: 30, weight: .medium)).foregroundStyle(accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Co-written").font(.system(size: 25, weight: .semibold, design: .serif))
-                    Text("A little perspective on your words.").font(.callout).foregroundStyle(.secondary)
-                }
+            HStack {
+                Text("Co-written").font(.headline)
                 Spacer()
-                Label(model.isRequestingAI ? "Sending to AI" : (model.aiReport == nil ? "On-device" : "AI assisted"), systemImage: model.aiReport == nil && !model.isRequestingAI ? "lock.shield" : "sparkles").font(.caption).foregroundStyle(accent)
-                    .padding(.horizontal, 11).padding(.vertical, 7).background(accent.opacity(0.08), in: Capsule())
-                Button { model.showPreferences() } label: { Image(systemName: "gearshape") }
-                    .buttonStyle(.plain).help("Settings")
-            }.padding(24)
+                Label(model.isRequestingAI ? "AI reviewing" : (model.aiReport == nil ? "On-device" : "AI + local"), systemImage: model.aiReport == nil && !model.isRequestingAI ? "lock.shield" : "sparkles")
+                    .font(.caption).foregroundStyle(.secondary)
+            }.padding(.horizontal, 20).padding(.vertical, 12)
             Divider()
             if let report = model.report {
                 HStack(alignment: .top, spacing: 0) {
@@ -69,10 +62,9 @@ struct AnalysisView: View {
             Divider()
             HStack(spacing: 12) {
                 Circle().fill(model.hasAccessibility ? accent : Color.secondary).frame(width: 6, height: 6)
-                Text(model.hasAccessibility ? "Shortcut only · ⇧⌘L" : "Accessibility permission needed")
+                Text(model.hasAccessibility ? (model.expandedMode ? "Mouse selection on · close window for shortcut only" : "Shortcut only · ⇧⌘L") : "Accessibility permission needed")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("Paste text…") { paste = true }
                 if model.report != nil {
                     Button("Copy report") {
                         NSPasteboard.general.clearContents()
@@ -83,9 +75,8 @@ struct AnalysisView: View {
             }.padding(14)
         }
         .foregroundStyle(ink).background(paper).tint(accent)
-        .preferredColorScheme(.light)
         .sheet(isPresented: $model.showSettings) { SettingsView(model: model).frame(width: 590) }
-        .sheet(isPresented: $paste) {
+        .sheet(isPresented: $model.showPaste) {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Give your words a fresh look").font(.title2).fontWeight(.medium)
                 Text("Paste a passage here. Local analysis works without Accessibility permission.").foregroundStyle(.secondary)
@@ -94,10 +85,10 @@ struct AnalysisView: View {
                 HStack {
                     Text("Up to 20,000 characters · English style estimates").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button("Cancel") { draft = ""; paste = false }
+                    Button("Cancel") { draft = ""; model.showPaste = false }
                     Button("Analyse") {
                         model.analyze(draft, source: "Pasted passage")
-                        draft = ""; paste = false
+                        draft = ""; model.showPaste = false
                     }.keyboardShortcut(.defaultAction).disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }.padding(24)
@@ -126,22 +117,22 @@ struct AnalysisView: View {
             VStack(alignment: .leading, spacing: 26) {
                 Text("Understand the writing\nyou already have.")
                     .font(.system(size: 38, weight: .medium, design: .serif)).lineSpacing(3)
-                Text("Select a passage in any app that supports macOS Accessibility. Co-written looks for patterns in its voice, formality, clarity, and rhythm — and shows you the words behind each observation.")
+                Text("While this window is open, highlight text in your editor or browser to review its voice, formality, clarity, and rhythm. Close the window to return to shortcut-only analysis in the menu bar.")
                     .font(.system(size: 16)).foregroundStyle(.secondary).lineSpacing(5).frame(maxWidth: 630)
                 HStack(alignment: .top, spacing: 28) {
                     feature("1", "Select your words", "Highlight a paragraph in your editor, browser, or email.")
-                    feature("2", "Take a closer look", "Press ⇧⌘L to analyse the selected text.")
+                    feature("2", "Take a closer look", "While this window is open, highlighting text in another app updates the analysis.")
                     feature("3", "Choose what helps", "Explore patterns and suggestions. Your voice stays yours.")
                 }
-                if !model.message.isEmpty { Text(model.message).font(.callout).foregroundStyle(.secondary) }
+                if !model.message.isEmpty && model.message != "Select text in another app, then press ⇧⌘L." { Text(model.message).font(.callout).foregroundStyle(.secondary) }
                 HStack {
                     Button("Set up selection access") { model.showPreferences() }.buttonStyle(.borderedProminent)
-                    Button("Paste a passage") { paste = true }
+                    Button("Paste a passage") { model.showPaste = true }
                     Button("Try an example") {
                         model.analyze("We want our writing to feel clear and human. However, the implementation of the new process was delayed by the team. Perhaps we could simplify the explanation in order to help our readers understand what happens next. Thanks for taking the time to share your ideas; your feedback makes this work better.", source: "Example passage")
                     }
                 }
-                Label("Passages stay in memory. No history or analytics. AI uses your sharing settings when you request analysis.", systemImage: "lock")
+                Label("Mouse selections use your AI sharing settings while this window is open.", systemImage: "cursorarrow.rays")
                     .font(.caption).foregroundStyle(accent)
             }.padding(36).frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -172,7 +163,7 @@ struct AnalysisView: View {
                 Text(report.readingSeconds < 60 ? "\(report.readingSeconds)s read" : "\(Int(ceil(Double(report.readingSeconds) / 60))) min read")
             }.font(.caption).foregroundStyle(.secondary)
             Text(report.language).font(.caption).foregroundStyle(.secondary)
-        }.padding(22).background(.white.opacity(0.4))
+        }.padding(22).background(Color(nsColor: .textBackgroundColor))
     }
     private func highlighted(_ report: WritingReport) -> AttributedString {
         var result = AttributedString(report.text)
@@ -194,7 +185,7 @@ struct AnalysisView: View {
                 row("Grammatical voice", report.grammaticalVoice)
                 row("Point of view", report.pointOfView)
                 row("Tone cues", report.tone)
-            }.padding(16).background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 10))
+            }.padding(16).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Sentence rhythm").font(.headline)
@@ -238,7 +229,7 @@ struct AnalysisView: View {
             }
             Text(label).font(.callout)
         }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
-            .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
     }
     private func row(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -260,7 +251,7 @@ struct AnalysisView: View {
                         Text("“\(finding.excerpt)”").font(.system(size: 17, design: .serif)).lineLimit(5)
                         Text(finding.explanation).font(.caption).foregroundStyle(.secondary).lineSpacing(3)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                        .background(selectedFinding?.id == finding.id ? accent.opacity(0.10) : .white.opacity(0.7), in: RoundedRectangle(cornerRadius: 10))
+                        .background(selectedFinding?.id == finding.id ? accent.opacity(0.10) : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
                 }.buttonStyle(.plain)
             }
             if report.findings.count > 100 { Text("Showing the first 100 cues. Copy the report for the complete list.").font(.caption) }
@@ -280,13 +271,13 @@ struct AnalysisView: View {
                         Text("“\(suggestion.excerpt)”").font(.system(size: 16, design: .serif))
                         Text(suggestion.advice).font(.callout).foregroundStyle(.secondary)
                     }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.white.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
                 }
                 Text(ai.caveat).font(.caption).foregroundStyle(.secondary)
             } else {
                 Image(systemName: "sparkles").font(.system(size: 30)).foregroundStyle(accent)
                 Text("Another perspective, when you want it.").font(.system(size: 24, design: .serif))
-                Text(model.aiProvider == .direct ? "AI can consider context, strengths, and practical edits. Add your own OpenAI API key to connect directly from this Mac. AI reviews passages only when you request analysis, using your sharing settings." : "AI can consider context, strengths, and practical edits. After you enable sharing, requested passages go to your configured Co-written service and OpenAI.").font(.callout).foregroundStyle(.secondary).lineSpacing(4)
+                Text(model.aiProvider == .direct ? "AI can consider context, strengths, and practical edits. Add your own OpenAI API key to connect directly from this Mac. AI reviews highlighted passages while the full window is open, using your sharing settings." : "AI can consider context, strengths, and practical edits. After you enable sharing, requested passages go to your configured Co-written service and OpenAI.").font(.callout).foregroundStyle(.secondary).lineSpacing(4)
             }
             if model.isRequestingAI { ProgressView("Considering your passage…") }
             if !model.aiError.isEmpty { Text(model.aiError).foregroundStyle(.red).font(.callout) }
@@ -318,7 +309,7 @@ struct SettingsView: View {
                     Button("Open Accessibility Settings") {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") { NSWorkspace.shared.open(url) }
                     }
-                    Text(model.shortcutAvailable ? "⇧⌘L analyses the current selection. Selecting text or opening the dropdown does not start analysis." : "⇧⌘L is already in use. Free that shortcut, or explicitly supply text using Paste or macOS Services.")
+                    Text(model.shortcutAvailable ? "Menu bar: ⇧⌘L analyses the current selection. Full app: mouse selection updates analysis while its window is open. Closing, hiding, or minimising it stops watching selections." : "⇧⌘L is already in use. Free that shortcut, or explicitly supply text using Paste or macOS Services.")
                         .font(.caption).foregroundStyle(.secondary)
                     Text("No keystrokes are recorded. Secure fields are skipped. Some apps do not expose selected text; use the Services menu or paste a passage.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -328,8 +319,8 @@ struct SettingsView: View {
                     TextEditor(text: $model.exclusions).font(.system(.caption, design: .monospaced)).frame(height: 75)
                 }
                 Section("AI analysis") {
-                    Toggle("Include AI when I request an analysis", isOn: $model.aiAutomatic)
-                    Text("With a saved credential and sharing permission, AI runs after you press ⇧⌘L or explicitly analyse pasted text. Selecting text, opening the dropdown, or changing settings never sends a passage. Direct OpenAI use is billed to your account. Turn this off for local analysis.").font(.caption).foregroundStyle(.secondary)
+                    Toggle("Include AI in analyses", isOn: $model.aiAutomatic)
+                    Text("AI runs for shortcut and pasted analyses, and for settled mouse selections while the full window is open. Mouse-triggered AI requests are spaced by at least 15 seconds; closing, hiding, or minimising the window stops them. Usage is billed to your account. Turn this off for local analysis.").font(.caption).foregroundStyle(.secondary)
                     Picker("Connect using", selection: $model.aiProvider) {
                         Text("Your OpenAI account").tag(AIProvider.direct)
                         Text("A shared Co-written service").tag(AIProvider.sharedService)

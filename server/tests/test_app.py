@@ -189,6 +189,17 @@ class ServiceTests(unittest.TestCase):
                 self.assertEqual(data["code"], code)
                 self.assertNotIn("private", json.dumps(data).lower())
 
+    def test_quick_labels_are_bounded_and_backward_compatible(self):
+        passage = "We wrote this passage."
+        raw = report(passage)
+        raw["quickLook"] = {"voice": "Active, first person", "formality": "Neutral", "tone": "Warm"}
+        self.assertEqual(sanitize_report(raw, passage)["quickLook"], raw["quickLook"])
+        raw["quickLook"]["voice"] = "word " * 30
+        safe = sanitize_report(raw, passage)
+        self.assertNotIn("quickLook", safe)
+        self.assertEqual(safe["summary"], raw["summary"])
+        validate_report(safe, passage)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,7 +12,7 @@ The initial repo uses `acousland/co-written` for both source and releases. The f
 ## Release steps
 
 1. Update `VERSION` and `RELEASE_NOTES.md`. Build numbers default to Unix time, which must increase. `COWRITTEN_BUILD_NUMBER` can override it; keep it higher than every previous release. Use the same signing identity and update key.
-2. Run tests, the app's `--startup-check` mode, and `--ui-check`, inspect the snapshots, and manually exercise selection capture in representative apps when UI access is available. The selection reader requires a user-granted Accessibility permission; this must not be enabled silently.
+2. Run tests, the app's `--startup-check` mode, and `--ui-check`, inspect the compact dropdown and light/dark snapshots, and manually exercise selection capture in representative apps when UI access is available. Verify shortcut-only menu-bar operation and mouse selections while the full window is open, including stopping on close/hide/minimise. The selection reader requires a user-granted Accessibility permission; this must not be enabled silently.
 3. Commit and push `main`, then run `scripts/publish-release.sh`. For preparation without publishing, use `scripts/prepare-release.sh`.
 
 The pipeline builds a universal app for macOS 14+, signs every Sparkle helper from the inside out with hardened runtime and timestamps, verifies the signature, notarises/staples the app, creates the DMG, then signs/notarises/staples the DMG. Apple assessments must pass before publication. The final DMG gets a SHA-256 checksum.

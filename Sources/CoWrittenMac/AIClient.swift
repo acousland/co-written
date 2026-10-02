@@ -10,6 +10,7 @@ struct AIReport: Decodable, Sendable {
     let suggestions: [AISuggestion]
     let caveat: String
     let aiWriting: AIWritingAssessment?
+    var quickLook: AIQuickLook? = nil
     private func validateStructure() throws {
         guard [summary, voice, formality, caveat].allSatisfy({ !$0.isEmpty && $0.count <= 2_000 }),
               strengths.count <= 6, strengths.allSatisfy({ !$0.isEmpty && $0.count <= 1_000 }),
@@ -29,12 +30,20 @@ struct AIReport: Decodable, Sendable {
         let omitted = suggestions.count - verifiedSuggestions.count + (aiWriting?.signals.count ?? 0) - (assessment?.signals.count ?? 0)
         let note = omitted == 0 ? caveat : Self.evidenceNote(caveat, omitted: omitted)
         let report = AIReport(summary: summary, voice: voice, formality: formality, strengths: strengths,
-                              suggestions: verifiedSuggestions, caveat: note, aiWriting: assessment)
+                              suggestions: verifiedSuggestions, caveat: note, aiWriting: assessment, quickLook: quickLook?.verified)
         try report.validate(passage: passage)
         return report
     }
     static func evidenceNote(_ original: String, omitted: Int) -> String {
         String(original.prefix(1_800)) + "\n\n\(omitted) finding\(omitted == 1 ? " was" : "s were") omitted because the quoted evidence could not be verified against this passage."
+    }
+}
+struct AIQuickLook: Decodable, Sendable {
+    let voice: String
+    let formality: String
+    let tone: String
+    var verified: AIQuickLook? {
+        [voice, formality, tone].allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.count <= 64 && $0.split(whereSeparator: \.isWhitespace).count <= 8 } ? self : nil
     }
 }
 struct AIWritingAssessment: Decodable, Sendable {

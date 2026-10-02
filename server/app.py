@@ -29,13 +29,16 @@ plausible humanAlternative. Empty signals are valid; no matches do not prove hum
 Weak-alone patterns need other cues. Preserve deliberate voice; leave quotations, titles, proper names,
 code and text discussing a pattern alone. Do not invent facts or rewrite the passage. The limitations
 must explain the overlap of human, edited, translated and AI-assisted writing and that style cannot
-establish authorship. Be especially cautious with short samples. Return only the requested JSON structure."""
+establish authorship. Be especially cautious with short samples. Provide quickLook labels for voice, formality and tone, each at most five words. Return only the requested JSON structure."""
 CATALOGUE = json.loads((Path(__file__).parent / "humanizer-patterns.json").read_text())
 SYSTEM_PROMPT += "\nHumanizer 3.1.0 patterns:\n" + "\n".join(
     f"{p['id']}. {p['name']}: {p['guidance']}" for p in CATALOGUE)
 SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
+        "quickLook": {"type": "object", "additionalProperties": False,
+            "properties": {field: {"type": "string", "minLength": 1, "maxLength": 48} for field in ("voice", "formality", "tone")},
+            "required": ["voice", "formality", "tone"]},
         "summary": {"type": "string", "minLength": 1, "maxLength": 600}, "voice": {"type": "string", "minLength": 1, "maxLength": 400},
         "formality": {"type": "string", "minLength": 1, "maxLength": 400}, "strengths": {"type": "array", "maxItems": 3, "items": {"type": "string", "minLength": 1, "maxLength": 300}},
         "suggestions": {"type": "array", "maxItems": 4, "items": {"type": "object", "additionalProperties": False,
@@ -50,7 +53,7 @@ SCHEMA = {
                     "required": ["patternID", "excerpt", "reason", "humanAlternative"]}}},
             "required": ["summary", "signals", "limitations"]},
     },
-    "required": ["summary", "voice", "formality", "strengths", "suggestions", "caveat", "aiWriting"],
+    "required": ["summary", "voice", "formality", "strengths", "suggestions", "caveat", "aiWriting", "quickLook"],
 }
 
 
@@ -177,11 +180,13 @@ def call_openai(text, api_key, model):
 
 
 def validate_report(report, text):
-    if not isinstance(report, dict) or set(report) != set(SCHEMA["required"]):
+    if not isinstance(report, dict) or set(report) not in (set(SCHEMA["required"]), set(SCHEMA["required"]) - {"quickLook"}):
         raise ValueError("Invalid report")
     for field in ("summary", "voice", "formality", "caveat"):
         if not isinstance(report[field], str) or not 1 <= len(report[field]) <= 2_000:
             raise ValueError("Invalid report field")
+    if "quickLook" in report and not valid_quick_look(report["quickLook"]):
+        raise ValueError("Invalid quick labels")
     strengths = report["strengths"]
     if not isinstance(strengths, list) or not 0 <= len(strengths) <= 6 or any(not isinstance(x, str) or not 1 <= len(x) <= 1_000 for x in strengths):
         raise ValueError("Invalid strengths")
@@ -217,9 +222,14 @@ def validate_report(report, text):
                 raise ValueError("Invalid AI-style explanation")
 
 
+def valid_quick_look(value):
+    return isinstance(value, dict) and set(value) == {"voice", "formality", "tone"} and all(
+        isinstance(v, str) and v.strip() and len(v) <= 64 and len(v.split()) <= 8 for v in value.values())
+
+
 def sanitize_report(report, text):
     # Keep supported observations; an inexact quote must never invalidate the useful overview.
-    if not isinstance(report, dict) or set(report) != set(SCHEMA["required"]):
+    if not isinstance(report, dict) or set(report) not in (set(SCHEMA["required"]), set(SCHEMA["required"]) - {"quickLook"}):
         raise ValueError("Invalid report")
     assessment = report["aiWriting"]
     if not isinstance(assessment, dict) or set(assessment) != {"summary", "signals", "limitations"}:
@@ -247,6 +257,8 @@ def sanitize_report(report, text):
     omitted = len(suggestions) - len(safe_suggestions) + omitted_signals
     safe_assessment = dict(assessment, signals=safe_signals)
     safe = dict(report, suggestions=safe_suggestions, aiWriting=safe_assessment)
+    if "quickLook" in safe and not valid_quick_look(safe["quickLook"]):
+        safe.pop("quickLook")
 
     def note(original, count):
         return original[:1_800] + f"\n\n{count} finding{' was' if count == 1 else 's were'} omitted because the quoted evidence could not be verified against this passage."

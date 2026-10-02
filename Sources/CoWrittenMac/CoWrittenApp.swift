@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 
 @main enum CoWrittenApp {
     @MainActor static func main() {
@@ -23,14 +24,15 @@ import SwiftUI
     }
 }
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSToolbarDelegate {
     let model: AppModel
     override init() { model = AppModel(); super.init() }
     init(model: AppModel) { self.model = model; super.init() }
     private var statusItem: NSStatusItem?
-    private var panel: NSPanel?
+    private var panel: NSWindow?
     private var settingsPanel: NSPanel?
     private var popover: NSPopover?
+    private var reportObservation: AnyCancellable?
     private let shortcut = GlobalShortcut()
     func applicationDidFinishLaunching(_ notification: Notification) {
         if ProcessInfo.processInfo.arguments.contains("--ai-check") {
@@ -51,7 +53,13 @@ import SwiftUI
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         statusItem = item
         popover = Self.makePopover(model: model)
-        model.present = { [weak self] in self?.openPopover() }
+        reportObservation = model.$report.sink { [weak self] report in
+            self?.popover?.contentSize = CompactAnalysisView.size(for: report)
+        }
+        model.present = { [weak self] in
+            guard let self else { return }
+            if self.model.expandedMode { self.openPanel() } else { self.openPopover() }
+        }
         model.expand = { [weak self] in self?.popover?.performClose(nil); self?.openPanel() }
         model.openSettings = { [weak self] in self?.settings() }
         model.closeSettings = { [weak self] in self?.settingsPanel?.close() }
@@ -103,7 +111,7 @@ import SwiftUI
     static func makePopover(model: AppModel) -> NSPopover {
         let dropdown = NSPopover()
         dropdown.behavior = .transient
-        dropdown.contentSize = NSSize(width: 420, height: 590)
+        dropdown.contentSize = CompactAnalysisView.size(for: model.report)
         dropdown.contentViewController = NSHostingController(rootView: CompactAnalysisView(model: model))
         return dropdown
     }
@@ -133,21 +141,30 @@ import SwiftUI
     @objc func openPanel() {
         popover?.performClose(nil)
         if panel == nil {
-            let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 880, height: 750),
-                                 styleMask: [.titled, .closable, .resizable, .utilityWindow], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 960, height: 760),
+                                 styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
             window.title = "Co-written"
             window.minSize = NSSize(width: 730, height: 580)
-            window.level = .floating
+            window.delegate = self
+            window.titlebarAppearsTransparent = true
+            window.toolbarStyle = .unified
+            let toolbar = NSToolbar(identifier: "CoWrittenFullWindow")
+            toolbar.delegate = self
+            toolbar.displayMode = .iconOnly
+            toolbar.allowsUserCustomization = false
+            window.toolbar = toolbar
             window.isReleasedWhenClosed = false
             window.isRestorable = false
-            window.hidesOnDeactivate = false
-            window.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
+            window.collectionBehavior = [.fullScreenPrimary]
             window.contentView = NSHostingView(rootView: AnalysisView(model: model))
             window.center()
             panel = window
         }
+        NSApp.setActivationPolicy(.regular)
+        if panel?.isMiniaturized == true { panel?.deminiaturize(nil) }
         panel?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        model.setExpandedMode(true)
     }
     @objc func settings() {
         model.hasAccessibility = model.reader.trusted
@@ -167,10 +184,48 @@ import SwiftUI
         NSApp.activate(ignoringOtherApps: true)
     }
     func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSWindow, window === panel {
+            model.setExpandedMode(false)
+            panel = nil
+            NSApp.setActivationPolicy(.accessory)
+        }
         if let window = notification.object as? NSWindow, window === settingsPanel {
             window.contentView = nil
             settingsPanel = nil
         }
+    }
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.flexibleSpace, NSToolbarItem.Identifier("paste"), NSToolbarItem.Identifier("settings")]
+    }
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { toolbarDefaultItemIdentifiers(toolbar) }
+    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier identifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        let item = NSToolbarItem(itemIdentifier: identifier)
+        item.target = self
+        switch identifier.rawValue {
+        case "paste":
+            item.label = "Paste text"
+            item.toolTip = "Paste a passage"
+            item.image = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "Paste text")
+            item.action = #selector(pastePassage)
+        case "settings":
+            item.label = "Settings"
+            item.toolTip = "Settings"
+            item.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Settings")
+            item.action = #selector(settings)
+        default: return nil
+        }
+        return item
+    }
+    @objc func pastePassage() { model.showPaste = true }
+    func windowDidMiniaturize(_ notification: Notification) {
+        if let window = notification.object as? NSWindow, window === panel { model.setExpandedMode(false) }
+    }
+    func windowDidDeminiaturize(_ notification: Notification) {
+        if let window = notification.object as? NSWindow, window === panel { model.setExpandedMode(true) }
+    }
+    func applicationDidHide(_ notification: Notification) { model.setExpandedMode(false) }
+    func applicationDidUnhide(_ notification: Notification) {
+        if let panel, panel.isVisible, !panel.isMiniaturized { model.setExpandedMode(true) }
     }
     @objc func checkUpdates() { model.updater?.checkForUpdates(nil) }
     @objc func quit() { NSApp.terminate(nil) }

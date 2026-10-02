@@ -4,132 +4,71 @@ import SwiftUI
 
 struct CompactAnalysisView: View {
     @ObservedObject var model: AppModel
-    @State private var tab = 0
-    @State private var pasting = false
-    @State private var draft = ""
-    init(model: AppModel, tab: Int = 0) { self.model = model; _tab = State(initialValue: tab) }
-    private let accent = Color(red: 0.27, green: 0.40, blue: 0.31)
+    static func size(for report: WritingReport?) -> NSSize {
+        guard let report else { return NSSize(width: 360, height: 280) }
+        return NSSize(width: 360, height: 184 + 24 * CompactSummary.features(report, ai: nil).count + (report.wordCount < 50 ? 14 : 0))
+    }
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 9) {
-                Image(systemName: "text.quote").foregroundStyle(accent)
-                Text("Co-written").font(.system(size: 20, weight: .semibold, design: .serif))
+            HStack(spacing: 8) {
+                Image(systemName: "text.quote").foregroundStyle(.tint)
+                Text("Co-written").font(.headline)
                 Spacer()
-                if model.isRequestingAI { ProgressView().controlSize(.small).help("Sharing this passage with your AI provider") }
-                else { Image(systemName: model.aiReport == nil ? "lock.shield" : "sparkles").font(.caption).foregroundStyle(.secondary).help(model.aiReport == nil ? "Local results" : "AI perspective ready") }
-                Button { model.expand?() } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }.help("Open detailed view")
+                if model.isRequestingAI { ProgressView().controlSize(.small) }
                 Button { model.showPreferences() } label: { Image(systemName: "gearshape") }.help("Settings")
-            }.buttonStyle(.plain).padding(17)
+                Button { model.expand?() } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }.help("Open full app")
+            }.buttonStyle(.plain).padding(16)
             Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 15) {
-                    if pasting {
-                        Text("Paste a passage").font(.headline)
-                        Text("AI runs when you click Analyse, using your sharing settings.").font(.caption).foregroundStyle(.secondary)
-                        TextEditor(text: $draft).font(.body).frame(height: 170).border(.secondary.opacity(0.3))
-                        HStack {
-                            Button("Cancel") { draft = ""; pasting = false }
-                            Spacer()
-                            Button("Analyse") { model.analyze(draft, source: "Pasted passage"); draft = ""; pasting = false }
-                                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        }
-                    } else if let report = model.report {
-                        HStack {
-                            Text(model.source).lineLimit(1)
-                            Spacer()
-                            Text("\(report.wordCount) words")
-                        }.font(.caption).foregroundStyle(.secondary)
-                        Text(report.text).font(.system(size: 14, design: .serif)).lineLimit(3).lineSpacing(3)
+            if let report = model.report {
+                HStack {
+                    Text(model.source).lineLimit(1)
+                    Spacer()
+                    Text("\(report.wordCount) words")
+                }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 16).padding(.top, 12)
+                VStack(spacing: 0) {
+                    ForEach(CompactSummary.features(report, ai: model.aiReport)) { feature in
                         HStack(spacing: 10) {
-                            metric("Formality", report.formality.map { "\($0)/100" } ?? "—", report.formalityLabel)
-                            metric("Reading ease", report.readability.map { String(format: "%.0f/100", $0) } ?? "—", report.readabilityLabel)
-                        }
-                        Picker("Analysis", selection: $tab) {
-                            Text("Overview").tag(0)
-                            Text("AI signs").tag(1)
-                            Text("Writing cues").tag(2)
-                        }.pickerStyle(.segmented).labelsHidden()
-                        switch tab {
-                        case 1: AIStyleView(report: report, assessment: model.aiReport?.aiWriting)
-                        case 2:
-                            if report.findings.isEmpty { Text("No local writing cues matched.").font(.callout) }
-                            ForEach(report.findings.prefix(8)) { finding in
-                                evidence(finding.kind, finding.excerpt, finding.explanation)
-                            }
-                            if report.findings.count > 8 { Button("Open detailed view for all \(report.findings.count) cues…") { model.expand?() } }
-                        default:
-                            if let ai = model.aiReport {
-                                Text(ai.summary).font(.system(size: 17, design: .serif)).lineSpacing(3)
-                                detail("Voice", ai.voice)
-                                detail("Formality", ai.formality)
-                                if let strength = ai.strengths.first { detail("What works", strength) }
-                                ForEach(Array(ai.suggestions.prefix(2).enumerated()), id: \.offset) { _, suggestion in
-                                    evidence("Try this", suggestion.excerpt, suggestion.advice)
-                                }
-                                Text(ai.caveat).font(.caption).foregroundStyle(.secondary)
-                            } else {
-                                detail("Grammatical voice", report.grammaticalVoice)
-                                detail("Point of view", report.pointOfView)
-                                detail("Tone cues", report.tone)
-                                Text(report.formalityEvidence).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        aiStatus
-                    } else {
-                        Image(systemName: "text.magnifyingglass").font(.system(size: 32)).foregroundStyle(accent).padding(.top, 18)
-                        Text("A fresh look at your words.").font(.system(size: 25, design: .serif))
-                        Text(model.message).font(.callout).lineSpacing(4)
-                        Text("Press ⇧⌘L to review selected text for voice, formality, clarity, and signs of templated writing. AI is included by default once you save your own key.").font(.callout).foregroundStyle(.secondary).lineSpacing(4)
-                        if !model.hasAccessibility { Button("Set up selection access…") { model.showPreferences() } }
-                        if !model.hasAICredential { Button("Add your OpenAI key…") { model.showPreferences() } }
-                        Button("Try an example") { model.analyze(UIValidation.example, source: "Example passage") }
-                        Text("Local analysis works offline. AI shares selected text with your configured provider and can incur API charges.").font(.caption).foregroundStyle(.secondary)
+                            Image(systemName: feature.icon).frame(width: 19).foregroundStyle(.tint)
+                            Text(feature.title).foregroundStyle(.secondary)
+                            Spacer(minLength: 8)
+                            Text(feature.value).fontWeight(.medium).lineLimit(1)
+                        }.font(.system(size: 12)).frame(height: 24).help(feature.detail)
                     }
-                }.padding(17).frame(maxWidth: .infinity, alignment: .leading)
+                }.padding(.horizontal, 16).padding(.top, 7)
+                if report.wordCount < 50 { Text("Short sample · tentative cues").font(.caption2).foregroundStyle(.secondary).padding(.top, 4) }
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "text.cursor").font(.system(size: 27)).foregroundStyle(.tint)
+                    Text("Select text, then ⇧⌘L").font(.headline)
+                    Text(model.message).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center).lineLimit(3)
+                }.padding(24).frame(maxHeight: .infinity)
             }
+            Spacer(minLength: 8)
+            status.padding(.horizontal, 16).padding(.bottom, 10)
             Divider()
             HStack(spacing: 12) {
-                Button("Paste") { pasting.toggle(); draft = "" }
-                if model.report != nil {
-                    Button("Copy report") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(model.reportText, forType: .string) }
-                    Button("Clear") { model.clear() }
-                }
+                Text("⇧⌘L").foregroundStyle(.secondary)
                 Spacer()
-                Text("⇧⌘L").foregroundStyle(.secondary).help("Analyse the current selection")
+                if model.report != nil {
+                    Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(model.reportText, forType: .string) } label: { Image(systemName: "doc.on.doc") }.help("Copy report")
+                    Button { model.clear() } label: { Image(systemName: "xmark.circle") }.help("Clear")
+                }
+                Button("Full app") { model.expand?() }
             }.font(.caption).buttonStyle(.borderless).padding(14)
-        }.frame(width: 420, height: 590).background(Color(red: 0.97, green: 0.96, blue: 0.93))
-            .foregroundStyle(Color(red: 0.16, green: 0.21, blue: 0.19)).tint(accent).preferredColorScheme(.light)
-            .onDisappear { draft = ""; pasting = false }
+        }.frame(width: Self.size(for: model.report).width, height: Self.size(for: model.report).height).tint(.accentColor)
     }
-    @ViewBuilder private var aiStatus: some View {
-        Divider()
-        if model.isRequestingAI { ProgressView("AI is reviewing your passage…").font(.caption) }
-        else if !model.aiError.isEmpty {
-            Text(model.aiError).font(.caption).foregroundStyle(.red)
-            if model.aiSharingAllowed { Button("Retry AI for this passage") { model.requestAI() } }
-        } else if model.aiReport != nil { Label("AI perspective · OpenAI", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary) }
-        else if !model.hasAICredential { Button("Add a key for AI…") { model.showPreferences() } }
-        else if !model.aiSharingAllowed { Button("Enable AI sharing…") { model.showPreferences() } }
-        else if model.aiAutomatic { Text("Press ⇧⌘L for a new AI review").font(.caption).foregroundStyle(.secondary) }
-        else { Text("AI is off by default. Open the detailed view to request a review.").font(.caption).foregroundStyle(.secondary) }
-        Text("Selection analysis only on ⇧⌘L").font(.caption2).foregroundStyle(.secondary)
-    }
-    private func metric(_ title: String, _ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.system(size: 24, design: .serif)).foregroundStyle(accent)
-            Text(label).font(.caption)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
-    }
-    private func detail(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) { Text(title).font(.caption).foregroundStyle(.secondary); Text(value).font(.callout) }
-    }
-    private func evidence(_ title: String, _ excerpt: String, _ advice: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.caption).foregroundStyle(accent)
-            Text("“\(excerpt)”").font(.system(size: 15, design: .serif))
-            Text(advice).font(.caption).foregroundStyle(.secondary)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.6), in: RoundedRectangle(cornerRadius: 9))
+    @ViewBuilder private var status: some View {
+        if !model.aiError.isEmpty {
+            HStack {
+                Label("AI unavailable", systemImage: "exclamationmark.triangle").foregroundStyle(.secondary).help(model.aiError)
+                Spacer()
+                if model.aiSharingAllowed { Button("Retry") { model.requestAI() } }
+            }.font(.caption)
+        } else if model.isRequestingAI { Label("AI reviewing", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary) }
+        else if model.aiReport != nil { Label("AI + local cues", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary) }
+        else if !model.hasAICredential { Button("Add OpenAI key…") { model.showPreferences() }.font(.caption) }
+        else if !model.aiSharingAllowed { Button("Allow AI sharing…") { model.showPreferences() }.font(.caption) }
+        else { Label("Local cues", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary) }
     }
 }
 
@@ -160,6 +99,6 @@ struct AIStyleView: View {
             Text(title).font(.caption).foregroundStyle(.secondary)
             Text("“\(excerpt)”").font(.system(size: 16, design: .serif))
             Text(explanation).font(.caption).lineSpacing(3)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
     }
 }

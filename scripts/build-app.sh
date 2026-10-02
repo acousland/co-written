@@ -18,6 +18,11 @@ app="$project_dir/dist/Co-written.app"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks"
 cp "$bin_dir/CoWrittenMac" "$app/Contents/MacOS/CoWrittenMac"
+# SwiftPM's universal Xcode path can record the deployment target as the SDK version.
+# Preserve macOS 14 compatibility while declaring the actual SDK used to compile the app.
+sdk_version=$(xcrun --sdk macosx --show-sdk-version)
+xcrun vtool -set-build-version macos 14.0 "$sdk_version" -replace \
+  -output "$app/Contents/MacOS/CoWrittenMac" "$app/Contents/MacOS/CoWrittenMac"
 ditto "$bin_dir/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 [[ -f Assets/CoWritten.icns ]] || scripts/make-icon.sh
 cp Assets/CoWritten.icns "$app/Contents/Resources/CoWritten.icns"

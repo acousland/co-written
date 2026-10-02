@@ -5,9 +5,11 @@ Welcome to Co-written
 3. Open Settings and enable Accessibility if you want to analyse selections across apps.
 4. Select text, then press Shift–Command–L to analyse it and open the dropdown.
 
-Selections are read only when you press Shift–Command–L. Highlighting text does not
-start analysis. Clicking the menu-bar icon opens your last results without reading
-selected text. Expand the dropdown to inspect the detailed view.
+In menu-bar-only mode, selections are read only when you press Shift–Command–L.
+The dropdown shows icons and short feature labels on one page. Clicking the icon
+opens your last results without reading selected text. Choose Full app for detail.
+While the full window is open, mouse selections in other apps update the analysis.
+Closing, hiding or minimising the full window stops watching selections.
 You can also use an app's Services menu → Analyse with Co-written, or paste a passage.
 Some applications do not expose their selected text to macOS Accessibility.
 
@@ -16,9 +18,11 @@ tone cues, sentence rhythm, repetition, and possible ways to simplify a passage.
 Style estimates support English. Results describe patterns rather than prove errors.
 Short passages produce less reliable estimates. Your audience and purpose matter.
 
-AI is included by default when you request analysis, once you add your own OpenAI
+AI is included by default for requested reviews and settled mouse selections in
+the full app, once you add your own OpenAI
 API key in Settings and allow sharing. Your key stays in this Mac's Keychain. Saving
-a key or changing settings never sends an existing passage. Requested passages are
+a key or changing settings never sends an existing passage. Mouse-triggered AI
+requests are spaced by at least 15 seconds. Reviewed passages are
 sent directly to OpenAI and usage is billed to your account; provider retention
 rules apply. Turn off AI in Settings to keep analysis local. No separate server is
 required and no shared key is bundled in the download.

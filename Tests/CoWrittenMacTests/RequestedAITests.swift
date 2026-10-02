@@ -236,3 +236,77 @@ private actor Probe {
     try await waitUntil { model.aiReport != nil }
     #expect(await probe.captured().count == 1)
 }
+
+@Test @MainActor func mouseSelectionReadsOnlyWhileFullWindowModeIsEnabled() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    var reads = 0
+    let probe = Probe()
+    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), selectionRead: {
+        reads += 1
+        return .text("The selected text was written yesterday.", "Editor")
+    }, selectionPermission: { true }, mouseAIMinimumInterval: .zero,
+    credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text) })
+    model.credentialsChanged(authorize: true)
+    model.start()
+    defer { model.stop() }
+    model.observeSelection()
+    #expect(reads == 0)
+    model.setExpandedMode(true)
+    model.observeSelection(); model.observeSelection()
+    try await waitUntil { model.aiReport != nil }
+    #expect(reads == 2)
+    #expect(await probe.captured().count == 1)
+    model.setExpandedMode(false)
+    let before = reads
+    try await Task.sleep(for: .milliseconds(650))
+    model.observeSelection()
+    #expect(reads == before)
+    #expect(await probe.captured().count == 1)
+}
+
+@Test @MainActor func closingFullWindowCancelsPendingMouseAIAndClearDoesNotRestoreTheSelection() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let probe = Probe()
+    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(150), selectionRead: {
+        .text("This passage stays local after closing.", "Editor")
+    }, selectionPermission: { true }, credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text) })
+    model.credentialsChanged(authorize: true)
+    model.setExpandedMode(true)
+    model.observeSelection(); model.observeSelection()
+    try await waitUntil { model.report != nil }
+    model.setExpandedMode(false)
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(await probe.captured().isEmpty)
+    model.aiAutomatic = false
+    model.setExpandedMode(true)
+    model.observeSelection(); model.observeSelection()
+    try await waitUntil { model.report != nil }
+    model.clear()
+    model.observeSelection(); model.observeSelection()
+    #expect(model.report == nil)
+    model.stop()
+}
+
+@Test @MainActor func mouseAIWaitsBetweenRequestsButShortcutRequestsAreImmediate() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let probe = Probe()
+    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), selectionRead: { .unavailable }, selectionPermission: { true }, mouseAIMinimumInterval: .milliseconds(300), credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text) })
+    model.credentialsChanged(authorize: true)
+    model.setExpandedMode(true)
+    defer { model.stop() }
+    model.analyze("First mouse selection.", source: "Editor", fromMouseSelection: true)
+    try await waitUntil { model.aiReport != nil }
+    model.analyze("Second mouse selection.", source: "Editor", fromMouseSelection: true)
+    try await waitUntil { model.report != nil }
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(await probe.captured().count == 1)
+    model.analyze("Second mouse selection.", source: "Editor")
+    try await waitUntil { model.aiReport != nil }
+    #expect(await probe.captured() == ["First mouse selection.", "Second mouse selection."])
+}
