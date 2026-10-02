@@ -3,6 +3,30 @@
     <channel>
         <title>Co-written</title>
         <item>
+            <title>0.3.0</title>
+            <pubDate>Fri, 02 Oct 2026 10:42:58 +1000</pubDate>
+            <sparkle:version>1790901697</sparkle:version>
+            <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Co-written 0.3.0
+
+- A succinct menu-bar dropdown: icons, short feature labels and cue counts on one page. Its height adapts to the findings. Expand into the full app for evidence and detailed advice.
+- Liquid Glass controls on macOS 26+, system colours and light/dark appearance, with native material fallbacks on older Macs. Readable content surfaces keep the writing clear.
+- Open the full app to analyse mouse selections in other apps automatically. Closing, hiding or minimising its window stops selection watching and pending AI work; menu-bar-only operation still uses **⇧⌘L**.
+- AI stays enabled by default with your own saved key and sharing permission. Mouse-triggered requests wait for stable selections and are spaced by at least 15 seconds. Explicit shortcut requests and retries remain responsive.
+- Start silently in the menu bar. Settings and the full window open only when requested, and saved windows are not restored.
+- Signed and notarised universal macOS app, DMG and verified Sparkle delta updates.
+
+AI reviews send the requested or settled highlighted passage to your configured provider and may incur API charges. Each user supplies their own key, stored in Keychain. Turn off AI for local analysis. Style cues, including Humanizer patterns, cannot establish authorship. Live OpenAI calls remain unverified without a saved key; regression checks use mock responses.
+]]></description>
+            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written-0.3.0.dmg" length="2556863" type="application/octet-stream" sparkle:edSignature="YNW58VsrRYdYyF8A3RFH+Ub+oVdxtSfGSzu601xETUNlaWUpzQaNqdvMqGdFQsN1BwROw/reqAcPJCbvsIptDA=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written1790901697-1790901036.delta" sparkle:deltaFrom="1790901036" length="337486" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BUr3m27jpDEAgCDsWsYZGB1v8nNFJqkug5cTPlZy4tCyS9ziPxzI16dF889grRbLbJmWWipOmQRtx5HbM7Q0Cw=="/>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written1790901697-1790900675.delta" sparkle:deltaFrom="1790900675" length="354210" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="3AdWl7l6wFICER1CGDt0WK4QYLFQpNlzkvHg3wscOahFhgv7xu1+NEfH02FKKsNxhaCjjMRuyBDuxD7WCOjoCg=="/>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.3.0/Co-written1790901697-1790899559.delta" sparkle:deltaFrom="1790899559" length="386354" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BR+p9g10hhZyxlmPA7iRh9hGEnd+G5JsB0HTMslIorjv2r/37lNOd7KXRmrLIDTFyV1ODSiG+oD6ivyYPcnGCg=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.2.2</title>
             <pubDate>Fri, 02 Oct 2026 10:31:57 +1000</pubDate>
             <sparkle:version>1790901036</sparkle:version>
@@ -42,30 +66,6 @@ Each downloader supplies their own OpenAI key, stored in their Mac’s Keychain.
             <sparkle:deltas>
                 <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.1/Co-written1790900675-1790899559.delta" sparkle:deltaFrom="1790899559" length="248562" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="4t22sn76jKJiyRO6TxBS3ApBBElwJSM5XkooCZLdmyZUjDZ20NBPx0YZcjuVboLNgH31AS1jLQIpz8IGzdQ0Cg=="/>
                 <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.1/Co-written1790900675-1790898615.delta" sparkle:deltaFrom="1790898615" length="432894" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="DTpOv6cKGaWacBNsacuPLqEp6EnF/vzYL3jTffiz2PLtDDGcGv/BZ26hT64pvuvRCXMxAl6V4zm2RrwFZC5aAQ=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.2.0</title>
-            <pubDate>Fri, 02 Oct 2026 10:07:23 +1000</pubDate>
-            <sparkle:version>1790899559</sparkle:version>
-            <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# Co-written 0.2.0
-
-- A compact dropdown from the menu-bar icon by default, also opened by Shift–Command–L and the macOS Service. An expand button opens the detailed view; right-click the icon for app commands.
-- AI review on by default once you save your own OpenAI API key and allow sharing. Keys stay in this Mac’s Keychain. Existing saved credentials get a one-time automatic-sharing choice.
-- Automatic AI waits for settled text, suppresses repeated requests, spaces requests by at least 15 seconds, and cancels stale work. Pause and automatic-AI settings give you control; offline analysis remains available.
-- A new AI signs tab based on Humanizer 3.1.0’s 26-pattern catalogue, with local cues and contextual AI review. Each finding quotes its evidence and explains possible human uses. Style cues cannot establish authorship, and no AI probability is shown.
-- Copied reports include local and AI advice and the Humanizer review.
-- Developer ID signed, Apple notarised universal DMG for macOS 14+, with signed Sparkle updates and a delta from 0.1.0 when smaller than a full download.
-
-Automatic AI sends selected and pasted text to your configured provider and may incur API charges. Disable it or pause analysis to keep new selections local. Each downloader supplies their own key; no shared key is bundled. Provider retention rules apply. Live OpenAI calls have not been tested with a real key; automated validation uses mocks.
-
-Humanizer is MIT licensed by Siqi Chen; its pinned catalogue and licence are included. This is editorial review rather than an authorship classifier.
-]]></description>
-            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.0/Co-written-0.2.0.dmg" length="2536093" type="application/octet-stream" sparkle:edSignature="tfLuZgjXtaqc227DqcEROQKMTuuYM6503qKcNX6lKqpad3wvb7k1ys8knPjQUUGmSriWFbCigsa20UBAS5qhAw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.0/Co-written1790899559-1790898615.delta" sparkle:deltaFrom="1790898615" length="406738" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="bqlHu+6HTTW/dRb1S9mth9IIp6VF4hW9OgMk4ObdpkJgeyhFMGDeie4kUgWR6LhTaiF2RpWFwrBT78mN4omcBA=="/>
             </sparkle:deltas>
         </item>
     </channel>
