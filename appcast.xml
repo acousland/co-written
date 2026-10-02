@@ -3,6 +3,30 @@
     <channel>
         <title>Co-written</title>
         <item>
+            <title>0.2.0</title>
+            <pubDate>Fri, 02 Oct 2026 10:07:23 +1000</pubDate>
+            <sparkle:version>1790899559</sparkle:version>
+            <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[# Co-written 0.2.0
+
+- A compact dropdown from the menu-bar icon by default, also opened by Shift–Command–L and the macOS Service. An expand button opens the detailed view; right-click the icon for app commands.
+- AI review on by default once you save your own OpenAI API key and allow sharing. Keys stay in this Mac’s Keychain. Existing saved credentials get a one-time automatic-sharing choice.
+- Automatic AI waits for settled text, suppresses repeated requests, spaces requests by at least 15 seconds, and cancels stale work. Pause and automatic-AI settings give you control; offline analysis remains available.
+- A new AI signs tab based on Humanizer 3.1.0’s 26-pattern catalogue, with local cues and contextual AI review. Each finding quotes its evidence and explains possible human uses. Style cues cannot establish authorship, and no AI probability is shown.
+- Copied reports include local and AI advice and the Humanizer review.
+- Developer ID signed, Apple notarised universal DMG for macOS 14+, with signed Sparkle updates and a delta from 0.1.0 when smaller than a full download.
+
+Automatic AI sends selected and pasted text to your configured provider and may incur API charges. Disable it or pause analysis to keep new selections local. Each downloader supplies their own key; no shared key is bundled. Provider retention rules apply. Live OpenAI calls have not been tested with a real key; automated validation uses mocks.
+
+Humanizer is MIT licensed by Siqi Chen; its pinned catalogue and licence are included. This is editorial review rather than an authorship classifier.
+]]></description>
+            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.0/Co-written-0.2.0.dmg" length="2536093" type="application/octet-stream" sparkle:edSignature="tfLuZgjXtaqc227DqcEROQKMTuuYM6503qKcNX6lKqpad3wvb7k1ys8knPjQUUGmSriWFbCigsa20UBAS5qhAw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.0/Co-written1790899559-1790898615.delta" sparkle:deltaFrom="1790898615" length="406738" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="976432" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="bqlHu+6HTTW/dRb1S9mth9IIp6VF4hW9OgMk4ObdpkJgeyhFMGDeie4kUgWR6LhTaiF2RpWFwrBT78mN4omcBA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.1.0</title>
             <pubDate>Fri, 02 Oct 2026 09:51:26 +1000</pubDate>
             <sparkle:version>1790898615</sparkle:version>
@@ -21,7 +45,7 @@ English style analysis uses explainable heuristics. It can miss patterns or flag
 
 The app is self-sufficient. Optional AI requires your own OpenAI API key in Settings; no separate server is needed. A protected backend is also provided as an optional alternative for owner-funded access. No live OpenAI call was made during initial validation.
 ]]></description>
-            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.1.0/Co-written-0.1.0.dmg" length="2351286" type="application/octet-stream" sparkle:edSignature="oQ2D9zf8uIW6SQSpX4CmFKijnTjvycdDFc4TEnwe3u/ES0EtVvfxHjhxvtcjeA8A/XQu6fYJjsZ+cNhOQsJIBA=="/>
+            <enclosure url="https://github.com/acousland/co-written/releases/download/v0.2.0/Co-written-0.1.0.dmg" length="2351286" type="application/octet-stream" sparkle:edSignature="oQ2D9zf8uIW6SQSpX4CmFKijnTjvycdDFc4TEnwe3u/ES0EtVvfxHjhxvtcjeA8A/XQu6fYJjsZ+cNhOQsJIBA=="/>
         </item>
     </channel>
 </rss>
