@@ -11,6 +11,7 @@ info = {
     "CFBundleVersion": build, "CFBundleIconFile": "CoWritten",
     "LSMinimumSystemVersion": "14.0", "LSUIElement": True, "NSHighResolutionCapable": True,
     "NSHumanReadableCopyright": "Copyright © 2026 Aaron Cousland. MIT licence.",
+    "NSAppleEventsUsageDescription": "Co-written reads only your highlighted text in Microsoft Word, including selections across pages, for writing analysis.",
     "NSServices": [{"NSMenuItem": {"default": "Analyse with Co-written"},
         "NSMessage": "analyzeSelection", "NSPortName": "Co-written",
         "NSSendTypes": ["public.utf8-plain-text", "NSStringPboardType"]}],

@@ -7,6 +7,8 @@ enum SelectionResult {
     case permissionRequired
     case unavailable
     case excluded
+    case wordPermissionRequired
+    case wordSelectionUnavailable
 }
 
 @MainActor final class SelectionReader {
@@ -16,7 +18,7 @@ enum SelectionResult {
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
     }
-    func read() -> SelectionResult {
+    func read(allowAutomationPrompt: Bool = true) -> SelectionResult {
         guard trusted else { return .permissionRequired }
         guard let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return .unavailable }
@@ -27,7 +29,7 @@ enum SelectionResult {
         guard AXUIElementCopyAttributeValue(application, kAXFocusedUIElementAttribute as CFString, &value) == .success,
               let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return .unavailable }
         let focused = unsafeDowncast(value, to: AXUIElement.self)
-        // Never read the value of a field or synthesise a Copy command. Only AXSelectedText is requested.
+        // Never read the value of a field or synthesise a Copy command.
         var element = focused
         for _ in 0..<4 {
             var subrole: CFTypeRef?
@@ -39,8 +41,14 @@ enum SelectionResult {
             element = unsafeDowncast(parent, to: AXUIElement.self)
         }
         var selection: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(focused, kAXSelectedTextAttribute as CFString, &selection) == .success,
-              let text = selection as? String,
+        _ = AXUIElementCopyAttributeValue(focused, kAXSelectedTextAttribute as CFString, &selection)
+        if app.bundleIdentifier == WordSelectionReader.bundleID {
+            var role: CFTypeRef?
+            _ = AXUIElementCopyAttributeValue(focused, kAXRoleAttribute as CFString, &role)
+            guard (role as? String) == kAXTextAreaRole || !(selection as? String ?? "").isEmpty else { return .unavailable }
+            return WordSelectionReader.read(from: app, prompt: allowAutomationPrompt)
+        }
+        guard let text = selection as? String,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .unavailable }
         return .text(text, app.localizedName ?? "Selected text")
     }

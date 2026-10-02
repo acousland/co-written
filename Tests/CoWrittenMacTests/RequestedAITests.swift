@@ -202,7 +202,7 @@ private actor Probe {
     #expect(await probe.captured().count == 1)
 }
 
-@Test @MainActor func enablingAIDoesNotSendAnExistingPassage() async throws {
+@Test @MainActor func enablingAIWithSharingChecksTheCurrentPassageAutomatically() async throws {
     let suite = "CoWritten.tests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
@@ -213,11 +213,8 @@ private actor Probe {
     model.analyze("Previously analysed locally.", source: "Test")
     try await waitUntil { model.report != nil }
     model.aiAutomatic = true
-    try await Task.sleep(for: .milliseconds(100))
-    #expect(await probe.captured().isEmpty)
-    model.analyze("Previously analysed locally.", source: "Explicit request")
     try await waitUntil { model.aiReport != nil }
-    #expect(await probe.captured().count == 1)
+    #expect(await probe.captured() == ["Previously analysed locally."])
 }
 
 @Test @MainActor func savingCredentialsDuringLocalAnalysisDoesNotSendThatPassage() async throws {
@@ -246,7 +243,7 @@ private actor Probe {
     let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), selectionRead: {
         reads += 1
         return .text("The selected text was written yesterday.", "Editor")
-    }, selectionPermission: { true }, mouseAIMinimumInterval: .zero,
+    }, selectionPermission: { true },
     credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text) })
     model.credentialsChanged(authorize: true)
     model.start()
@@ -291,22 +288,37 @@ private actor Probe {
     model.stop()
 }
 
-@Test @MainActor func mouseAIWaitsBetweenRequestsButShortcutRequestsAreImmediate() async throws {
+@Test @MainActor func enabledAIReviewsEverySettledMousePassageWithoutAnExtraInterval() async throws {
     let suite = "CoWritten.tests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
     let probe = Probe()
-    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), selectionRead: { .unavailable }, selectionPermission: { true }, mouseAIMinimumInterval: .milliseconds(300), credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text) })
+    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), selectionRead: { .unavailable }, selectionPermission: { true }, credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text) })
     model.credentialsChanged(authorize: true)
     model.setExpandedMode(true)
     defer { model.stop() }
-    model.analyze("First mouse selection.", source: "Editor", fromMouseSelection: true)
+    for passage in ["First mouse selection.", "Second mouse selection.", "Third mouse selection."] {
+        model.analyze(passage, source: "Editor", fromMouseSelection: true)
+        try await waitUntil { model.aiReport?.summary == passage }
+    }
+    #expect(await probe.captured() == ["First mouse selection.", "Second mouse selection.", "Third mouse selection."])
+}
+
+@Test @MainActor func deselectingAfterAICheckStartsStillDeliversTheRequestedReview() async throws {
+    let suite = "CoWritten.tests." + UUID().uuidString
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let probe = Probe()
+    let model = AppModel(defaults: defaults, aiDelay: .milliseconds(10), selectionRead: { .unavailable }, selectionPermission: { true },
+        credentialAvailable: { _, _ in true }, analyzeAI: { text, _, _ in try await probe.call(text, delay: .milliseconds(120)) })
+    model.credentialsChanged(authorize: true)
+    model.setExpandedMode(true)
+    defer { model.stop() }
+    model.analyze("A settled selected passage.", source: "Editor", fromMouseSelection: true)
+    try await waitUntil { model.isRequestingAI }
+    model.observeSelection()
+    #expect(model.isRequestingAI)
     try await waitUntil { model.aiReport != nil }
-    model.analyze("Second mouse selection.", source: "Editor", fromMouseSelection: true)
-    try await waitUntil { model.report != nil }
-    try await Task.sleep(for: .milliseconds(50))
-    #expect(await probe.captured().count == 1)
-    model.analyze("Second mouse selection.", source: "Editor")
-    try await waitUntil { model.aiReport != nil }
-    #expect(await probe.captured() == ["First mouse selection.", "Second mouse selection."])
+    #expect(model.aiStatus == "AI checked")
+    #expect(await probe.captured() == ["A settled selected passage."])
 }

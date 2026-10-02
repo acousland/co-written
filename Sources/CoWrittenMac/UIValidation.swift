@@ -35,6 +35,7 @@ import SwiftUI
             model.aiReport = AIReport(summary: "Friendly and explanatory, with a few stock rhetorical phrases that could be more specific.", voice: "Mostly active grammatical voice; a conversational narrator addressing the reader.", formality: "Neutral to conversational.", strengths: ["The intended benefit to teams is easy to identify."], suggestions: [AISuggestion(excerpt: "plays a crucial role", advice: "Name the concrete change this project makes for a team.")], caveat: "This short sample gives limited context.", aiWriting: AIWritingAssessment(summary: "A cluster of stock framing and a dramatic closer is worth reviewing.", signals: [AIWritingSignal(patternID: 2, excerpt: "Let that sink in.", reason: "This closer asks the reader to pause without adding information.", humanAlternative: "A human writer may use it deliberately for emphasis.")], limitations: "Style cannot establish authorship; edited, human and AI-assisted writing overlap."))
             model.aiReport?.quickLook = AIQuickLook(voice: "Active, conversational", formality: "Neutral", tone: "Friendly")
             try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-ai.png"))
+            try await capture(CompactAnalysisView(model: model).preferredColorScheme(.dark), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-dark.png"), appearance: .darkAqua)
             try await capture(CompactAnalysisView(model: model), size: CompactAnalysisView.size(for: model.report, ai: model.aiReport), to: directory.appendingPathComponent("dropdown-ai-signs.png"))
             try await captureFull(AnalysisView(model: model, tab: 3), size: NSSize(width: 960, height: 760), to: directory.appendingPathComponent("ai-signs.png"))
             model.aiReport = nil
@@ -59,7 +60,7 @@ import SwiftUI
                     throw NSError(domain: "UIValidation", code: 3, userInfo: [NSLocalizedDescriptionKey: "Missing icon for Humanizer \(pattern.id)"])
                 }
             }
-            print("Rendered nineteen app views; verified narrow-window sizing, all pattern icons, dropdown configuration, bundled Humanizer catalogue and Services selector. Images: \(directory.path)")
+            print("Rendered twenty app views; verified narrow-window sizing, all pattern icons, dropdown configuration, bundled Humanizer catalogue and Services selector. Images: \(directory.path)")
             exit(0)
         } catch {
             fputs("UI validation failed: \(error.localizedDescription)\n", stderr)

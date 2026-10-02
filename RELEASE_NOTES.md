@@ -1,9 +1,9 @@
-# Co-written 0.3.1
+# Co-written 0.3.2
 
-- Narrow and half-screen windows use a stacked passage and analysis layout, with shorter tabs and a smaller minimum width.
-- Window size is controlled by AppKit so content updates do not change its size limits during resizing or tiling.
-- The menu-bar dropdown names every matched AI-style pattern with its own icon: dramatic closes, stock wording, inflated claims, chat residue and more. Hover to see the exact quoted evidence and explanation.
-- Local and AI observations of the same pattern and overlapping passage are combined; repeated occurrences retain their counts. The dropdown stays on one page and adjusts when AI adds a pattern.
+- Every settled analysis includes an AI check when AI, a saved credential and sharing are enabled. The 15-second mouse delay is removed. Deselecting after a request starts lets that review finish; changing the passage or closing the full window still cancels it.
+- Enabling AI with already-authorised sharing checks the current passage too. AI progress, completion and failures are explicit. The full overview includes the AI check, and an authorised refresh or retry needs no repeated sharing confirmation.
+- Restore the warm off-white paper, dark ink and muted green presentation in both light and dark mode. Native Liquid Glass window and toolbar controls remain.
+- Word selections use its native selected text range rather than a focused page fragment, including selections across pages. Enable Word selections in Settings or allow the one-time macOS Automation prompt after pressing ⇧⌘L in Word. Access failure is shown instead of silently using partial text.
 - Signed, notarised universal macOS app, DMG and verified Sparkle delta updates.
 
-Style cues can occur in human and AI writing and cannot establish authorship.
+Selections remain limited to 20,000 characters, with a notice in the report for longer passages. Word capture has automated native-query and multi-page response checks; live Word capture has not been manually exercised. AI requests use each user's own Keychain credential.

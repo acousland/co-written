@@ -18,9 +18,16 @@ import SwiftUI
     @Published var aiReport: AIReport?
     @Published var aiError = ""
     @Published var isRequestingAI = false
+    @Published private(set) var isWaitingForAI = false
     @Published var aiProvider: AIProvider { didSet { defaults.set(aiProvider.rawValue, forKey: "aiProvider"); resetAIConfiguration() } }
     @Published var hasDirectKey = false
-    @Published var aiAutomatic: Bool { didSet { defaults.set(aiAutomatic, forKey: "aiAutomatic"); configurationGeneration += 1; cancelAI() } }
+    @Published var aiAutomatic: Bool {
+        didSet {
+            defaults.set(aiAutomatic, forKey: "aiAutomatic")
+            if !aiAutomatic { configurationGeneration += 1; cancelAI() }
+            else if !oldValue { scheduleAI() }
+        }
+    }
     @Published private(set) var authorizedDestinations: [String]
     @Published private(set) var hasAICredential = false
     @Published var server: String { didSet { defaults.set(server, forKey: "aiServer"); resetAIConfiguration() } }
@@ -41,8 +48,6 @@ import SwiftUI
     private let credentialAvailable: @MainActor (AIProvider, String) -> Bool
     private let aiDelay: Duration
     private let selectionPermission: (@MainActor () -> Bool)?
-    private let mouseAIMinimumInterval: Duration
-    private var lastAIRequest: ContinuousClock.Instant?
     private var selectionTimer: Timer?
     private var selectionCandidate = ""
     private var lastObservedSelection = ""
@@ -50,6 +55,14 @@ import SwiftUI
     private var pendingAI: Task<Void, Never>?
     var destination: String? { aiProvider == .direct ? DirectOpenAI.account : try? AIClient.tokenAccount(server) }
     var aiSharingAllowed: Bool { hasAICredential && destination.map { authorizedDestinations.contains($0) } == true }
+    var aiStatus: String {
+        if isRequestingAI { return "AI reviewing" }
+        if isWaitingForAI { return "AI queued" }
+        if !aiError.isEmpty { return "AI unavailable" }
+        if aiReport != nil { return "AI checked" }
+        if !aiAutomatic { return "Local only" }
+        return aiSharingAllowed ? "AI ready" : "Set up AI"
+    }
     var reportText: String {
         guard let report else { return "" }
         var text = report.exportText
@@ -65,7 +78,7 @@ import SwiftUI
 
     init(defaults: UserDefaults = .standard, aiDelay: Duration = .milliseconds(150),
          selectionRead: (@MainActor () -> SelectionResult)? = nil,
-         selectionPermission: (@MainActor () -> Bool)? = nil, mouseAIMinimumInterval: Duration = .seconds(15),
+         selectionPermission: (@MainActor () -> Bool)? = nil,
          credentialAvailable: @escaping @MainActor (AIProvider, String) -> Bool = { provider, server in
              if provider == .direct { return SecureAIStore.exists(endpoint: DirectOpenAI.account) }
              guard let endpoint = try? AIClient.tokenAccount(server) else { return false }
@@ -78,7 +91,6 @@ import SwiftUI
         self.aiDelay = aiDelay
         self.selectionRead = selectionRead
         self.selectionPermission = selectionPermission
-        self.mouseAIMinimumInterval = mouseAIMinimumInterval
         self.credentialAvailable = credentialAvailable
         self.analyzeAI = analyzeAI
         self.defaults = defaults
@@ -120,7 +132,7 @@ import SwiftUI
         let allowed = selectionPermission?() ?? reader.trusted
         if hasAccessibility != allowed { hasAccessibility = allowed }
         guard hasAccessibility else { selectionCandidate = ""; cancelAI(); return }
-        switch selectionRead?() ?? reader.read() {
+        switch selectionRead?() ?? reader.read(allowAutomationPrompt: false) {
         case let .text(text, app):
             let bounded = String(text.prefix(WritingAnalyzer.maximumCharacters + 1))
             let identity = SHA256.hash(data: Data((app + "\n" + bounded).utf8)).map { String(format: "%02x", $0) }.joined()
@@ -138,12 +150,16 @@ import SwiftUI
             message = "This app or secure field is excluded from selection analysis."
         case .permissionRequired:
             selectionCandidate = ""; cancelAI()
+        case .wordPermissionRequired:
+            selectionFailed("Allow Co-written to read Word selections in Settings → Enable Word selections, or press ⇧⌘L in Word.")
+        case .wordSelectionUnavailable:
+            selectionFailed("Word could not provide its complete selection. Try ⇧⌘L again, or use Word’s Services menu.")
         case .unavailable:
             selectionCandidate = ""
-            // Clicking our own window retains the requested review. Deselecting elsewhere cancels sharing.
+            // Deselecting cancels queued sharing. A check already requested for this passage finishes.
             if NSWorkspace.shared.frontmostApplication?.processIdentifier != ProcessInfo.processInfo.processIdentifier {
                 lastObservedSelection = ""
-                cancelAI()
+                if pendingAI != nil { cancelAI() }
             }
         }
     }
@@ -154,6 +170,8 @@ import SwiftUI
         case .permissionRequired: clear(); message = "Enable Accessibility in Settings to read a selection. You can also paste text here."
         case .excluded: clear(); message = "This app or secure field is excluded from selection analysis."
         case .unavailable: clear(); message = "This app does not expose a text selection. Use Services → Analyse with Co-written, or copy and paste text here."
+        case .wordPermissionRequired: clear(); message = "Allow Co-written to read Word selections in System Settings → Privacy & Security → Automation."
+        case .wordSelectionUnavailable: clear(); message = "Word could not provide its complete selection. Try again, or use Word’s Services menu."
         }
         present?()
     }
@@ -194,8 +212,14 @@ import SwiftUI
     }
     private func cancelAI() {
         pendingAI?.cancel(); pendingAI = nil
+        if isWaitingForAI { isWaitingForAI = false }
         aiTask?.cancel(); aiTask = nil
-        isRequestingAI = false
+        if isRequestingAI { isRequestingAI = false }
+    }
+    private func selectionFailed(_ text: String) {
+        selectionCandidate = ""; lastObservedSelection = ""
+        if report != nil || isAnalyzing { clear() } else { cancelAI() }
+        if message != text { message = text }
     }
     private func resetAIConfiguration() {
         configurationGeneration += 1
@@ -217,19 +241,15 @@ import SwiftUI
               aiReport == nil, pendingAI == nil else { return }
         let current = generation
         let delay = aiDelay
-        let lastRequest = lastAIRequest
-        let interval = mouseAIMinimumInterval
+        isWaitingForAI = true
         pendingAI = Task { [weak self] in
             do {
                 try await Task.sleep(for: delay)
-                if mouseSelection, let lastRequest {
-                    let remaining = interval - lastRequest.duration(to: .now)
-                    if remaining > .zero { try await Task.sleep(for: remaining) }
-                }
                 guard !Task.isCancelled, let self, self.generation == current,
                       self.aiAutomatic, self.aiSharingAllowed, self.report?.text == report.text,
                       !mouseSelection || self.expandedMode else { return }
                 self.pendingAI = nil
+                self.isWaitingForAI = false
                 self.requestAI(defaultRequest: true)
             } catch { /* A new request or settings change cancelled pending work. */ }
         }
@@ -238,11 +258,11 @@ import SwiftUI
         guard let report, !isRequestingAI else { return }
         if defaultRequest && (!aiAutomatic || !aiSharingAllowed) { return }
         pendingAI?.cancel(); pendingAI = nil
+        isWaitingForAI = false
         let current = generation
         let server = self.server
         let provider = aiProvider
         let analyzeAI = self.analyzeAI
-        lastAIRequest = .now
         isRequestingAI = true; aiError = ""
         aiTask = Task { [weak self] in
             do {

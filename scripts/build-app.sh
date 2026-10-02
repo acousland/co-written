@@ -34,7 +34,7 @@ chmod 644 "$app/Contents/Resources/"*Licence.txt
 python3 scripts/write-plist.py "$app/Contents/Info.plist" "$version" "$build_number" "$feed"
 chmod 755 "$app/Contents/MacOS/CoWrittenMac"
 if [[ $identity == - ]]; then
-  codesign --force --deep --sign - "$app"
+  codesign --force --deep --entitlements Assets/CoWritten.entitlements --sign - "$app"
   echo "Development build: ad hoc signed" >&2
 else
   if [[ $(signing_team "$identity") != $(tr -d '[:space:]' < Assets/signing-team) ]]; then
@@ -47,7 +47,7 @@ else
   "${sign[@]}" "$sparkle/Autoupdate"
   "${sign[@]}" "$sparkle/Updater.app"
   "${sign[@]}" "$app/Contents/Frameworks/Sparkle.framework"
-  "${sign[@]}" "$app"
+  "${sign[@]}" --entitlements Assets/CoWritten.entitlements "$app"
 fi
 codesign --verify --deep --strict "$app"
 lipo -info "$app/Contents/MacOS/CoWrittenMac"

@@ -14,6 +14,8 @@ While the full window is open, mouse selections in other apps update the analysi
 Narrow windows stack the passage above the analysis to fit beside your editor.
 Closing, hiding or minimising the full window stops watching selections.
 You can also use an app's Services menu → Analyse with Co-written, or paste a passage.
+For Word selections across pages, choose Enable Word selections in Settings, or
+press the shortcut in Word and allow the one-time macOS Automation prompt.
 Some applications do not expose their selected text to macOS Accessibility.
 
 The local analysis estimates grammatical voice, point of view, formality, reading ease,
@@ -24,8 +26,9 @@ Short passages produce less reliable estimates. Your audience and purpose matter
 AI is included by default for requested reviews and settled mouse selections in
 the full app, once you add your own OpenAI
 API key in Settings and allow sharing. Your key stays in this Mac's Keychain. Saving
-a key or changing settings never sends an existing passage. Mouse-triggered AI
-requests are spaced by at least 15 seconds. Reviewed passages are
+a key or changing providers does not send an existing passage. Enabling AI with
+already-authorised sharing checks the current passage too. Every settled analysis
+includes an AI check when enabled. Reviewed passages are
 sent directly to OpenAI and usage is billed to your account; provider retention
 rules apply. Turn off AI in Settings to keep analysis local. No separate server is
 required and no shared key is bundled in the download.
